@@ -1,4 +1,8 @@
-BeginPackage["Tokenizer"]
+BeginPackage["PrologTokenizer`"];
+
+Tokenize::usage = "Tokenize[input] converts Prolog code into tokens.";
+
+Begin["`Private`"];
 
 (* main tokenizer function *)
 tokenCreator[inputCode_String] := Module[{tokens},
@@ -27,4 +31,5 @@ tokenCreator[inputCode_String] := Module[{tokens},
   tokens
 ];
 
-EndPackage[]
+End[];
+EndPackage[];
