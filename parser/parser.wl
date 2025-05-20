@@ -1,7 +1,6 @@
 BeginPackage["PrologParser`", {"PrologTokenizer`"}];
 
 Parse::usage = "Parse[tokens] converts tokens into Prolog AST.";
-ParseString::usage = "ParseString[code] parses Prolog code from a string.";
 
 Begin["`Private`"];
 
@@ -147,8 +146,6 @@ matchToken[expected_String, tokens_List] :=
     Abort[],
     tokens[[1]]
   ];
-
-ParseString[code_String] := Parse[Tokenize[code]];
 
 End[];
 EndPackage[];
