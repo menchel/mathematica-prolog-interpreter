@@ -48,6 +48,8 @@ tokenizeFileLines[fileName_String] := Module[{lines, tokensPerLine},
   tokensPerLine  (* Return tokens for all lines *)
 ];
 
+ClearAll[parseASingleTerm, parseList, matchToken];
+
 (* main parser function *)
 parser[tokens_List]:= Module[{allClauses={},restOfTokens=tokens,singleClause,allRemain},
 	While[restOfTokens!={}
@@ -57,6 +59,7 @@ parser[tokens_List]:= Module[{allClauses={},restOfTokens=tokens,singleClause,all
 		AppendTo[allClauses,singleClause];
 		(* continue *)
 		restOfTokens = allRemain
+  		If[Length[restOfTokens] == 0, Break[]]; (* just in case *)
 	];
 	allClauses
 ];
@@ -67,13 +70,13 @@ parseASingleClause[tokens_List]:= Module[{start,body,next},
 	{start,next} = parseASingleTerm[tokens];
 	(* now we need a "switch case" to distinguish between options*)
 	Which[
-	next[[1,1]] == "ColonDash", (* a wild rule has appeared! *)
+	next =!= {} && next[[1,1]] == "ColonDash", (* a wild rule has appeared! *)
 	{body,next} = parseRuleBody[Rest[next]]
 	matchToken["Dot",next];
 	(* return the parsed version *)
 	{Rule[start, body], Rest[next]},
 	
-	next[[1,1]] == "Dot", (* a wild fact has appeared! *)
+	next =!= {} && next[[1,1]] == "Dot", (* a wild fact has appeared! *)
 	{start, Rest[next]},
 	
 	True,
@@ -85,7 +88,7 @@ parseASingleClause[tokens_List]:= Module[{start,body,next},
 (* parse on a term level *)
 parseASingleTerm[tokens_List]:=Module[{first, rest, arguments},
   (* parse the first element to start *)
-  first = tokens[[1]];
+  first = First[tokens];
   rest = Rest[tokens];
   (* let's look at the possibilities *)
   Which[
@@ -114,7 +117,8 @@ parseArguments[tokens_List] := Module[{arguements = {}, term, rest = tokens},
   While[True,
     {term, rest} = parseASingleTerm[rest]; (* get element *)
     AppendTo[arguements, term];
-    If[rest[[1, 1]] === "Comma", rest = Rest[rest], Break[]]; (* comma=continue, otherwise, end*)
+    If[rest === {} || rest[[1, 1]] =!= "Comma", Break[]]; (* comma=continue, otherwise, end*)
+    rest = Rest[rest];
   ];
   matchToken["RParen", rest]; (* if we ended, we must see an ) *)
   {arguements, Rest[rest]}
@@ -135,22 +139,22 @@ parseRuleBody[tokens_List] := Module[{terms = {}, term, rest = tokens},
 parseList[tokens_List] := Module[{elements = {}, head, rest = tokens, tail = "[]"},
   (* start list parse *)
   While[True,
-    If[rest[[1, 1]] === "RBracket", Break[]]; (* end of list *)
+    If[rest === {} || rest[[1, 1]] === "RBracket", Break[]]; (* end of list *)
     {head, rest} = parseTerm[rest]; (* get first term *)
     AppendTo[elements, head];
     
     Which[
-      rest[[1, 1]] === "Comma", rest = Rest[rest], (* continue of list *)
-      rest[[1, 1]] === "Bar", (* get only tail *)
+      rest =!= {} && rest[[1, 1]] === "Comma", rest = Rest[rest], (* continue of list *)
+      rest =!= {} && rest[[1, 1]] === "Bar", (* get only tail *)
         rest = Rest[rest];
         {tail, rest} = parseTerm[rest];
         Break[], (* it is tail, so it will end *)
-      rest[[1, 1]] === "RBracket", Break[],
+      rest =!= {} && rest[[1, 1]] === "RBracket", Break[],
       True, Message[parseList::syntax, rest]; Abort[]
     ];
   ];
   matchToken["RBracket", rest]; (* end of list must be a ] *)
-  {Fold[Predicate[".", {#1, #2}] &, tail, Reverse[elements]], Rest[rest]} (* continue *)
+  {Fold[Predicate[".", {#2, #1}] &, tail, Reverse[elements]], Rest[rest]} (* continue *)
 ];
 
 (* a helper function to the cases where a specific token is needed *)
