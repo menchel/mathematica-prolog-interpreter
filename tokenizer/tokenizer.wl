@@ -28,16 +28,3 @@ tokenCreator[inputCode_String] := Module[{tokens},
 ];
 
 EndPackage[]
-(* input handler *)
-tokenizeFileLines[fileName_String] := Module[{lines, tokensPerLine},
-  lines = Import[fileName, "Lines"];
-  tokensPerLine = tokenCreator /@ lines;
-  
-  Do[
-    Print["Line ", i, ": ", tokensPerLine[[i]]],
-    {i, Length[lines]}
-  ];
-  
-  tokensPerLine  (* Return tokens for all lines *)
-];
-tokenizeFileLines[(* path to file *)];
