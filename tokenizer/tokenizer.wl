@@ -1,3 +1,5 @@
+BeginPackage["Tokenizer"]
+
 (* main tokenizer function *)
 tokenCreator[inputCode_String] := Module[{tokens},
 
@@ -25,6 +27,7 @@ tokenCreator[inputCode_String] := Module[{tokens},
   tokens
 ];
 
+EndPackage[]
 (* input handler *)
 tokenizeFileLines[fileName_String] := Module[{lines, tokensPerLine},
   lines = Import[fileName, "Lines"];
