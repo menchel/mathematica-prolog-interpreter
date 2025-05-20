@@ -1,5 +1,6 @@
+BeginPackage["Parser"]
+
 ClearAll[
-  tokenCreator,
   tokenizeFileLines,
   parser,
   parseASingleClause,
@@ -8,44 +9,8 @@ ClearAll[
   parseRuleBody,
   parseList,
   matchToken,
-  Predicate
-];
-
-
-tokenCreator[inputCode_String] := Module[{tokens},
-
-  tokens = StringCases[
-    inputCode,
-    {
-      s : RegularExpression["\\s+"] :> Nothing,
-      s : RegularExpression["[a-z][a-zA-Z0-9_]*"] :> {"Atom", s},
-      s : RegularExpression["[A-Z_][a-zA-Z0-9_]*"] :> {"Variable", s},
-      s : RegularExpression["\\d+(?:\\.\\d+)?"] :> {"Number", s},
-      s : RegularExpression["'(?:[^']|'')*'"] :> {"String", s},
-      
-      ":-" :> {"ColonDash", ":-"},
-      "." :> {"Dot", "."},
-      "," :> {"Comma", ","},
-      "(" :> {"LParen", "("},
-      ")" :> {"RParen", ")"},
-      "[" :> {"LBracket", "["},
-      "]" :> {"RBracket", "]"},
-      "|" :> {"Bar", "|"}
-    }
-  ];
-  tokens
-];
-
-tokenizeFileLines[fileName_String] := Module[{lines, tokensPerLine},
-  lines = Import[fileName, "Lines"];
-  tokensPerLine = tokenCreator /@ lines;
-  
-  Do[
-    Print["Line ", i, ": ", tokensPerLine[[i]]],
-    {i, Length[lines]}
-  ];
-  
-  tokensPerLine  (* Return tokens for all lines *)
+  Predicate,
+  PrologList
 ];
 
 ClearAll[parseASingleTerm, parseList, matchToken];
@@ -167,7 +132,7 @@ parseList[tokens_List] := Module[{elements = {}, head, rest = tokens, tail = "[]
     ];
   ];
   matchToken["RBracket", rest];
-  {Fold[Predicate[".", {#2, #1}] &, tail, Reverse[elements]], Rest[rest]} (* continue *)
+  {Fold[PrologList[".", {#2, #1}] &, tail, Reverse[elements]], Rest[rest]} (* continue *)
 ];
 
 (* a helper function to the cases where a specific token is needed *)
@@ -177,3 +142,5 @@ matchToken[expected_String, tokens_List] :=
     Abort[],
     tokens[[1]]
   ];
+
+EndPackage[]
