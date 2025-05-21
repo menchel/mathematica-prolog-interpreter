@@ -14,7 +14,7 @@ A prolog interpreter in mathematica for end course project in advanced topics in
      - If rule:
           - add to the envieroment. 🏞️
 2) Full REPL:🤩
-  - READ- get lines from a .pl file.
-  - EVAL- use the eval function to process (after tokenizer+parser).
-  - PRINT- print to the screen the output.
-  - LOOP- continue to read.
+       - READ- get lines from a .pl file.
+       - EVAL- use the eval function to process (after tokenizer+parser).
+       - PRINT- print to the screen the output.
+       - LOOP- continue to read.
