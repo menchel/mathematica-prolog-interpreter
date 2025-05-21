@@ -6,7 +6,7 @@ A prolog interpreter in mathematica for end course project in advanced topics in
 2) A working parser. Get the output from the tokenizer, and creates an AST. `cd parser && parser.wl`
 3) A visual aid to see the parser output. `cd parser && visualAider.wl`
 
-## nect to come👀:
+## next to come👀:
 1) Full eval implementation.
      - get the parsed contect.
      - If fact:
