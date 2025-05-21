@@ -1,9 +1,3 @@
-BeginPackage["PrologParser`", {"PrologTokenizer`"}];
-
-Parse::usage = "Parse[tokens] converts tokens into Prolog AST.";
-
-Begin["`Private`"];
-
 ClearAll[
   tokenizeFileLines,
   parser,
@@ -146,6 +140,3 @@ matchToken[expected_String, tokens_List] :=
     Abort[],
     tokens[[1]]
   ];
-
-End[];
-EndPackage[];
