@@ -12,7 +12,7 @@ A prolog interpreter in mathematica for end course project in advanced topics in
      - If fact:
          - search correctness.👍
      - If rule:
-          - add to the envieroment. 🏞️
+          - add to the environment. 🏞️
 2) Full REPL:🤩
        - READ- get lines from a .pl file.
        - EVAL- use the eval function to process (after tokenizer+parser).
