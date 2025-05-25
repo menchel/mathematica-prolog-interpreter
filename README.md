@@ -1,5 +1,5 @@
 # mathematica-prolog-interpreter
-A prolog interpreter in mathematica for end course project in advanced topics in software engineering (02360651)
+A prolog interpreter in mathematica for final project in advanced topics in software engineering (02360651)
 
 ## What do I currently have?
 1) A working tokenizer. Gets input, and transfers it to known tokens. `cd tokenizer && tokenizer.wl`
