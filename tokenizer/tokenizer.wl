@@ -5,6 +5,9 @@ tokenCreator[inputCode_String] := Module[{tokens},
     inputCode,
     {
      (* go over all cases *)
+      s : RegularExpression["true"] :> {"true",s},
+      s : RegularExpression["false"] :> {"false",s},
+      s : RegularExpression["_"] :> {"placeHolder",s},
       s : RegularExpression["\\s+"] :> Nothing,
       s : RegularExpression["[a-z][a-zA-Z0-9_]*"] :> {"Atom", s},
       s : RegularExpression["[A-Z_][a-zA-Z0-9_]*"] :> {"Variable", s},
@@ -19,7 +22,8 @@ tokenCreator[inputCode_String] := Module[{tokens},
       ")" :> {"RParen", ")"},
       "[" :> {"LBracket", "["},
       "]" :> {"RBracket", "]"},
-      "|" :> {"Bar", "|"}
+      "|" :> {"Bar", "|"},
+      "+" :> {"Negation","+"}
     }
   ];
   tokens
