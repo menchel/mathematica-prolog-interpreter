@@ -5,12 +5,10 @@ ClearAll[toASTTree, visualizeAST]
 
 (* Rule: head :- body. *)
 toASTTree[Rule[head_, body_List]] :=
-  Tree["Clause",
-    {
-      Tree["Head", {toASTTree[head]}],
-      Tree["Body", toASTTree /@ body]  (* <-- properly closed now *)
-    }
-  ];
+  Tree["Clause", {
+    Tree["Head", {toASTTree[head]}],
+    Tree["Body", toASTTree /@ body]
+  }];
 
 (* Predicate term: e.g. append([], Ys, Ys) *)
 toASTTree[Predicate[name_, args_List]] :=
@@ -41,8 +39,17 @@ toASTTree[s_String] /; StringStartsQ[s, "'"] :=
 toASTTree[n_?NumericQ] :=
   Tree["Number: " <> ToString[n]];
 
+(* Negation term: e.g. +p(X) or +true *)
+toASTTree[Negation[term_]] :=
+  Tree["Negation", {toASTTree[term]}];
+
+(* PlaceHolder (_) *)
+toASTTree[PlaceHolder[]] :=
+  Tree["PlaceHolder: _"];
+
 (* Fallback *)
-toASTTree[other_] := Tree["Unknown: " <> ToString[other]];
+toASTTree[other_] :=
+  Tree["Unknown: " <> ToString[other]];
 
 (* Top-level visualizer *)
 visualizeAST[parsed_List] := 
@@ -57,6 +64,8 @@ visualizeAST[parsed_List] :=
         StringStartsQ[#2, "String"]     , Brown,
         StringStartsQ[#2, "Number"]     , Darker@Red,
         StringStartsQ[#2, "List"]       , DarkCyan,
+        StringStartsQ[#2, "Negation"]   , Red,
+        StringStartsQ[#2, "PlaceHolder"], DarkGray,
         StringStartsQ[#2, "Head"]       , Gray,
         StringStartsQ[#2, "Body"]       , Gray,
         True                            , Black
