@@ -55,6 +55,26 @@ parseASingleTerm[tokens_List] := Module[{first, rest, arguments},
   rest = Rest[tokens];
   (* let's look at the possibilities *)
   Which[
+  
+    (* handle placeHolder *)
+    first[[1]] === "placeHolder",
+    {"_", rest},
+    
+    (* handle true *)
+    first[[1]] === "true",
+    {True, rest},
+
+    (* handle false *)
+    first[[1]] === "false",
+    {False, rest},
+    
+    (* handle negation operator *)
+    first[[1]] === "Negation",
+    Module[{term, newRest},
+      {term, newRest} = parseASingleTerm[rest];
+      {Negation[term], newRest}
+    ],
+    
     first[[1]] === "Atom" || first[[1]] === "Variable",  (* we saw an element we can't parse more *)
     If[rest =!= {} && rest[[1, 1]] === "LParen", (* it means that we start a fact *)
       {arguments, rest} = parseArguments[Rest[rest]]; (* get parsed arguments *)
