@@ -1,29 +1,35 @@
-
 (* just helper for a node *)
 ClearAll[ASTNode];
 ASTNode[type_, children___] := <|"type" -> type, "children" -> {children}|>;
 
+(* token user *)
+ClearAll[tokens];
+tokens = tokenCreator[(* your prolog code *)];
+
 (* some token helper functions *)
 ClearAll[seeAnotherToken, getNextToken, matchToken];
-SetAttributes[{seeAnotherToken, getNextToken, matchToken}, HoldFirst];
 
-(* get the token, doesn't chnage the list *)
-seeAnotherToken[tokens_] := If[Length[tokens] > 0, First[tokens], None];
+(* get the token, doesn't change the list *)
+seeAnotherToken[] := If[Length[tokens] > 0, First[tokens], None];
 
-(* get the token, chnage the list *)
-getNextToken[tokens_] := If[Length[tokens] > 0,
-  Module[{tok = First[tokens]}, tokens = Rest[tokens]; tok],
-  None
-];
+(* get the token, change the list *)
+getNextToken[] := 
+  If[Length[tokens] > 0,
+    Module[{token = First[tokens]},
+      tokens = Rest[tokens];
+      token
+    ],
+    None
+  ];
 
 (* try to match the expected token *)
-matchToken[tokens_, matchTokened_] := Module[{tok = seeAnotherToken[tokens]},
-  If[tok[[1]] === matchTokened,
-    getNextToken[tokens],
-    Message[matchToken::unmatchTokened, matchTokened, tok]; Abort[]
+matchToken[expected_] := Module[{token = seeAnotherToken[]},
+  If[token[[1]] === expected,
+    getNextToken[],
+    Message[matchToken::unmatchTokened, expected, token]; Abort[]
   ]
 ];
-matchToken::unmatchTokened = "matchTokened `1`, but got `2`.";
+matchToken::unmatchTokened = "Expected `1`, but got `2`.";
 
 (* the actual parser *)
 
@@ -34,109 +40,108 @@ ClearAll[
 ];
 
 (* main parse tree, start to check *)
-parseProgram[tokens_] := Module[{allClauses, queryClause},
-  If[seeAnotherToken[tokens][[1]] === "query",
+parseProgram[] := Module[{allClauses, queryClause},
+  If[seeAnotherToken[][[1]] === "query",
     (* we saw a query, let's parse it personally *)
-    queryClause = parseQuery[tokens];
+    queryClause = parseQuery[];
     ASTNode["Program", queryClause],
     (* if not, then we started with some facts and/or rules and then a query *)
-    allClauses = parseClauseList[tokens];
-    queryClause = parseQuery[tokens];
+    allClauses = parseClauseList[];
+    queryClause = parseQuery[];
     ASTNode["Program", allClauses, queryClause]
   ]
 ];
 
 (* parses list of clauses *)
-parseClauseList[tokens_] := Module[{allClauses = {}},
+parseClauseList[] := Module[{allClauses = {}},
   (* we assume that it has at least one, otherwise we wouldn't have reached it *)
-  AppendTo[allClauses, parseClause[tokens]];
+  AppendTo[allClauses, parseClause[]];
   (* as long as we see Atom/Variable, it is possible *)
-  While[MemberQ[{"Atom", "Variable"}, seeAnotherToken[tokens][[1]]],
-    AppendTo[allClauses, parseClause[tokens]]
+  While[MemberQ[{"Atom", "Variable"}, seeAnotherToken[][[1]]],
+    AppendTo[allClauses, parseClause[]]
   ];
   ASTNode["ClauseList", Sequence @@ allClauses]
 ];
 
 (* parses a single given clause *)
-parseClause[tokens_] := Module[{start, body},
+parseClause[] := Module[{start, body},
   (* get the predicate *)
-  start = parsePredicate[tokens];
+  start = parsePredicate[];
   (* we can either see a rule, or a fact *)
-  If[seeAnotherToken[tokens][[1]] === "ColonDash",
+  If[seeAnotherToken[][[1]] === "ColonDash",
     (* rule *)
-    getNextToken[tokens];
+    getNextToken[];
     (* parse the list of conditions *)
-    body = parseOrList[tokens];
-    matchToken[tokens, "Dot"];
+    body = parseOrList[];
+    matchToken["Dot"];
     ASTNode["Clause", start, body],
     (* fact *)
-    matchToken[tokens, "Dot"];
+    matchToken["Dot"];
     ASTNode["Fact", start]
   ]
 ];
 
 (* parsing a query *)
-parseQuery[tokens_] := Module[{res},
-  matchToken[tokens, "query"];
+parseQuery[] := Module[{res},
+  matchToken["query"];
   (* get the actual query *)
-  res = parseOrList[tokens];
+  res = parseOrList[];
   (* we MUST end with . *)
-  matchToken[tokens, "Dot"];
+  matchToken["Dot"];
   ASTNode["Query", res]
 ];
 
 (* parses a list (can have or, or not*)
-parseOrList[tokens_] := Module[{ors = {}},
+parseOrList[] := Module[{ors = {}},
   (* begin with first list (or the only one if no ; ) *)
-  AppendTo[ors, parsePredicateList[tokens]];
+  AppendTo[ors, parsePredicateList[]];
   (* if we see more ; , then it means another condition *)
-  While[seeAnotherToken[tokens][[1]] === "or",
-    getNextToken[tokens];
+  While[seeAnotherToken[][[1]] === "or",
+    getNextToken[];
     (* parse the continuation *)
-    AppendTo[ors, parsePredicateList[tokens]]
+    AppendTo[ors, parsePredicateList[]]
   ];
   (* differ between with or, or no ors *)
   If[Length[ors] == 1, First[ors], ASTNode["OrList", Sequence @@ ors]]
 ];
 
 (* parses a list of predicates *)
-parsePredicateList[tokens_] := Module[{preds = {}},
+parsePredicateList[] := Module[{preds = {}},
   (* parse the first *)
-  AppendTo[preds, parsePredicate[tokens]];
+  AppendTo[preds, parsePredicate[]];
   (* if there are more *)
-  While[seeAnotherToken[tokens][[1]] === "Comma",
-    getNextToken[tokens];
+  While[seeAnotherToken[][[1]] === "Comma",
+    getNextToken[];
     (* continue to parse *)
-    AppendTo[preds, parsePredicate[tokens]]
+    AppendTo[preds, parsePredicate[]]
   ];
   (* differ between single and list *)
   If[Length[preds] == 1, First[preds], ASTNode["PredicateList", Sequence @@ preds]]
 ];
 
 (* match a single predicate *)
-parsePredicate[tokens_] := Module[{token, currentAtom, arguments},
-  token = seeAnotherToken[tokens];
+parsePredicate[] := Module[{token, currentAtom, arguments},
+  token = seeAnotherToken[];
   (* waht can we see? *)
   Switch[token[[1]],
     (* a regular atom *)
     "Atom",
-    currentAtom = getNextToken[tokens][[2]];
+    currentAtom = getNextToken[][[2]];
     (* check if it is a list of terms or not *)
-    Print[tokens]
-    If[seeAnotherToken[tokens][[1]] === "LParen",
-      getNextToken[tokens];
-      arguments = parseTermList[tokens];
-      matchToken[tokens, "RParen"];
-      ASTNode["Predicate", currentAtom, arguments]
+    If[seeAnotherToken[][[1]] === "LParen",
+      getNextToken[];
+      arguments = parseTermList[];
+      matchToken["RParen"];
+      ASTNode["Predicate", currentAtom, arguments],
       ASTNode["Predicate", currentAtom]
     ],
     (* note the case of negation *)
     "Negation",
-    getNextToken[tokens];
-    ASTNode["Not", parsePredicate[tokens]],
+    getNextToken[];
+    ASTNode["Not", parsePredicate[]],
     (* we can get true/false as well *)
     "true" | "false",
-    ASTNode["Boolean", getNextToken[tokens][[2]]],
+    ASTNode["Boolean", getNextToken[][[2]]],
     (* no match *)
     _, Message[parsePredicate::unmatchTokened, token]; Abort[]
   ]
@@ -144,68 +149,68 @@ parsePredicate[tokens_] := Module[{token, currentAtom, arguments},
 parsePredicate::unmatchTokened = "UnmatchTokened token in predicate: `1`.";
 
 (* matches a list of terms *)
-parseTermList[tokens_] := Module[{terms = {}},
+parseTermList[] := Module[{terms = {}},
   (* parse the first term *)
-  AppendTo[terms, parseTerm[tokens]];
+  AppendTo[terms, parseTerm[]];
   (* if there are more *)
-  While[seeAnotherToken[tokens][[1]] === "Comma",
-    getNextToken[tokens];
+  While[seeAnotherToken[][[1]] === "Comma",
+    getNextToken[];
     (* parse the next one *)
-    AppendTo[terms, parseTerm[tokens]]
+    AppendTo[terms, parseTerm[]]
   ];
   ASTNode["TermList", Sequence @@ terms]
 ];
 
 (* parse a single term *)
-parseTerm[tokens_] := Module[{tok = seeAnotherToken[tokens]},
+parseTerm[] := Module[{tok = seeAnotherToken[]},
   (* check what we got *)
   Switch[tok[[1]],
     "Number" | "Atom" | "Variable" | "placeHolder" | "String",
-    ASTNode["Term", getNextToken[tokens][[2]]],
+    ASTNode["Term", getNextToken[][[2]]],
     (* case of list *)
-    "LBracket", parseList[tokens],
-    "Bar", ASTNode["Term", getNextToken[tokens][[2]]],
+    "LBracket", parseList[],
+    "Bar", ASTNode["Term", getNextToken[][[2]]],
     _, Message[parseTerm::unmatchTokened, tok]; Abort[]
   ]
 ];
 parseTerm::unmatchTokened = "UnmatchTokened token in term: `1`.";
 
 (* parse a prolog list *)
-parseList[tokens_] := Module[{start, tail},
+parseList[] := Module[{start, tail},
   (* must start with [ *)
-  matchToken[tokens, "LBracket"];
-  If[seeAnotherToken[tokens][[1]] === "RBracket",
+  matchToken["LBracket"];
+  If[seeAnotherToken[][[1]] === "RBracket",
     (* empty list *)
-    getNextToken[tokens];
+    getNextToken[];
     ASTNode["List", {}],
     (* non empty *)
-    start = parseTerm[tokens];
-    If[seeAnotherToken[tokens][[1]] === "Bar",
+    start = parseTerm[];
+    If[seeAnotherToken[][[1]] === "Bar",
       (* place holder *)
-      getNextToken[tokens];
+      getNextToken[];
       (* get next *)
-      tail = parseTail[tokens];
-      matchToken[tokens, "RBracket"];
+      tail = parseTail[];
+      matchToken["RBracket"];
       ASTNode["ListCons", start, tail],
       (* regular list *)
       tail = {};
       (* continue if needed *)
-      While[seeAnotherToken[tokens][[1]] === "Comma",
-        getNextToken[tokens];
-        AppendTo[tail, parseTerm[tokens]]
+      While[seeAnotherToken[][[1]] === "Comma",
+        getNextToken[];
+        AppendTo[tail, parseTerm[]]
       ];
-      matchToken[tokens, "RBracket"];
+      matchToken["RBracket"];
       ASTNode["List", Sequence @@ Prepend[tail, start]]
     ]
   ]
 ];
 
 (* parse the tail if a special list [ | ] *)
-parseTail[tokens_] := Module[{token = seeAnotherToken[tokens]},
+parseTail[] := Module[{token = seeAnotherToken[]},
   Switch[token[[1]],
-    "Variable", ASTNode["TailVar", getNextToken[tokens][[2]]],
-    "LBracket", parseList[tokens],
-    "Bar", ASTNode["TailBar", getNextToken[tokens][[2]]],
+    "Variable", ASTNode["TailVar", getNextToken[][[2]]],
+    "LBracket", parseList[],
+    "Bar", ASTNode["TailBar", getNextToken[][[2]]],
     _, Message[parseTail::unmatchTokened, token]; Abort[]
   ]
 ];
