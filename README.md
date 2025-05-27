@@ -8,6 +8,8 @@ A prolog interpreter in mathematica for final project in advanced topics in soft
 
 ## Next to come👀:
 - add support of ; (logical or).
+- add query ?-
+- use EBNF https://github.com/simonkrenger/ch.bfh.bti7064.w2013.PrologParser/blob/master/doc/prolog-bnf-grammar.txt
 1) Full eval implementation.
      - get the parsed contect.
      - If fact:
