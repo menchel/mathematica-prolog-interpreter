@@ -4,12 +4,9 @@ A prolog interpreter in mathematica for final project in advanced topics in soft
 ## What do I currently have?
 1) A working tokenizer. Gets input, and transfers it to known tokens. `cd tokenizer && tokenizer.wl`
 2) A working parser. Get the output from the tokenizer, and creates an AST. `cd parser && parser.wl`
-3) A visual aid to see the parser output. `cd parser && visualAider.wl`
+3) A visual aid to see the parser output. `cd parser && visualizer.wl`
 
 ## Next to come👀:
-- add support of ; (logical or).
-- add query ?-
-- use EBNF https://github.com/simonkrenger/ch.bfh.bti7064.w2013.PrologParser/blob/master/doc/prolog-bnf-grammar.txt
 1) Full eval implementation.
      - get the parsed contect.
      - If fact:
