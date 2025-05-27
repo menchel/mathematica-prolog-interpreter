@@ -3,23 +3,23 @@ ClearAll[ASTNode];
 ASTNode[type_, children___] := <|"type" -> type, "children" -> {children}|>;
 
 (* ==== Token Stream Utilities ==== *)
-ClearAll[peekToken, nextToken, expect];
-SetAttributes[{peekToken, nextToken, expect}, HoldFirst];
+ClearAll[seeAnotherToken, getNextToken, matchToken];
+SetAttributes[{seeAnotherToken, getNextToken, matchToken}, HoldFirst];
 
-peekToken[tokens_] := If[Length[tokens] > 0, First[tokens], None];
+seeAnotherToken[tokens_] := If[Length[tokens] > 0, First[tokens], None];
 
-nextToken[tokens_] := If[Length[tokens] > 0,
+getNextToken[tokens_] := If[Length[tokens] > 0,
   Module[{tok = First[tokens]}, tokens = Rest[tokens]; tok],
   None
 ];
 
-expect[tokens_, expected_] := Module[{tok = peekToken[tokens]},
-  If[tok[[1]] === expected,
-    nextToken[tokens],
-    Message[expect::unexpected, expected, tok]; Abort[]
+matchToken[tokens_, matchTokened_] := Module[{tok = seeAnotherToken[tokens]},
+  If[tok[[1]] === matchTokened,
+    getNextToken[tokens],
+    Message[matchToken::unmatchTokened, matchTokened, tok]; Abort[]
   ]
 ];
-expect::unexpected = "Expected `1`, but got `2`.";
+matchToken::unmatchTokened = "matchTokened `1`, but got `2`.";
 
 (* ==== Parser Rules ==== *)
 
@@ -30,7 +30,7 @@ ClearAll[
 ];
 
 parseProgram[tokens_] := Module[{clauses, query},
-  If[peekToken[tokens][[1]] === "query",
+  If[seeAnotherToken[tokens][[1]] === "query",
     query = parseQuery[tokens];
     ASTNode["Program", query],
     clauses = parseClauseList[tokens];
@@ -41,7 +41,7 @@ parseProgram[tokens_] := Module[{clauses, query},
 
 parseClauseList[tokens_] := Module[{clauses = {}},
   AppendTo[clauses, parseClause[tokens]];
-  While[MemberQ[{"Atom", "Variable"}, peekToken[tokens][[1]]],
+  While[MemberQ[{"Atom", "Variable"}, seeAnotherToken[tokens][[1]]],
     AppendTo[clauses, parseClause[tokens]]
   ];
   ASTNode["ClauseList", Sequence @@ clauses]
@@ -49,27 +49,27 @@ parseClauseList[tokens_] := Module[{clauses = {}},
 
 parseClause[tokens_] := Module[{head, body},
   head = parsePredicate[tokens];
-  If[peekToken[tokens][[1]] === "ColonDash",
-    nextToken[tokens];
+  If[seeAnotherToken[tokens][[1]] === "ColonDash",
+    getNextToken[tokens];
     body = parseOrList[tokens];
-    expect[tokens, "Dot"];
+    matchToken[tokens, "Dot"];
     ASTNode["Clause", head, body],
-    expect[tokens, "Dot"];
+    matchToken[tokens, "Dot"];
     ASTNode["Fact", head]
   ]
 ];
 
 parseQuery[tokens_] := Module[{q},
-  expect[tokens, "query"];
+  matchToken[tokens, "query"];
   q = parseOrList[tokens];
-  expect[tokens, "Dot"];
+  matchToken[tokens, "Dot"];
   ASTNode["Query", q]
 ];
 
 parseOrList[tokens_] := Module[{ors = {}},
   AppendTo[ors, parsePredicateList[tokens]];
-  While[peekToken[tokens][[1]] === "or",
-    nextToken[tokens]; (* consume ; *)
+  While[seeAnotherToken[tokens][[1]] === "or",
+    getNextToken[tokens]; (* consume ; *)
     AppendTo[ors, parsePredicateList[tokens]]
   ];
   If[Length[ors] == 1, First[ors], ASTNode["OrList", Sequence @@ ors]]
@@ -77,84 +77,84 @@ parseOrList[tokens_] := Module[{ors = {}},
 
 parsePredicateList[tokens_] := Module[{preds = {}},
   AppendTo[preds, parsePredicate[tokens]];
-  While[peekToken[tokens][[1]] === "Comma",
-    nextToken[tokens];
+  While[seeAnotherToken[tokens][[1]] === "Comma",
+    getNextToken[tokens];
     AppendTo[preds, parsePredicate[tokens]]
   ];
   If[Length[preds] == 1, First[preds], ASTNode["PredicateList", Sequence @@ preds]]
 ];
 
 parsePredicate[tokens_] := Module[{tok, atom, args},
-  tok = peekToken[tokens];
+  tok = seeAnotherToken[tokens];
   Switch[tok[[1]],
     "Atom",
-    atom = nextToken[tokens][[2]];
-    If[peekToken[tokens][[1]] === "RParen",
-      nextToken[tokens];
+    atom = getNextToken[tokens][[2]];
+    If[seeAnotherToken[tokens][[1]] === "RParen",
+      getNextToken[tokens];
       args = parseTermList[tokens];
-      expect[tokens, "LParen"];
+      matchToken[tokens, "LParen"];
       ASTNode["Predicate", atom, args],
       ASTNode["Predicate", atom]
     ],
     "Negation",
-    nextToken[tokens];
+    getNextToken[tokens];
     ASTNode["Not", parsePredicate[tokens]],
     "true" | "false",
-    ASTNode["Boolean", nextToken[tokens][[2]]],
-    _, Message[parsePredicate::unexpected, tok]; Abort[]
+    ASTNode["Boolean", getNextToken[tokens][[2]]],
+    _, Message[parsePredicate::unmatchTokened, tok]; Abort[]
   ]
 ];
-parsePredicate::unexpected = "Unexpected token in predicate: `1`.";
+parsePredicate::unmatchTokened = "UnmatchTokened token in predicate: `1`.";
 
 parseTermList[tokens_] := Module[{terms = {}},
   AppendTo[terms, parseTerm[tokens]];
-  While[peekToken[tokens][[1]] === "Comma",
-    nextToken[tokens];
+  While[seeAnotherToken[tokens][[1]] === "Comma",
+    getNextToken[tokens];
     AppendTo[terms, parseTerm[tokens]]
   ];
   ASTNode["TermList", Sequence @@ terms]
 ];
 
-parseTerm[tokens_] := Module[{tok = peekToken[tokens]},
+parseTerm[tokens_] := Module[{tok = seeAnotherToken[tokens]},
   Switch[tok[[1]],
     "Number" | "Atom" | "Variable" | "placeHolder" | "String",
-    ASTNode["Term", nextToken[tokens][[2]]],
+    ASTNode["Term", getNextToken[tokens][[2]]],
     "LBracket", parseList[tokens],
-    "Bar", ASTNode["Term", nextToken[tokens][[2]]],
-    _, Message[parseTerm::unexpected, tok]; Abort[]
+    "Bar", ASTNode["Term", getNextToken[tokens][[2]]],
+    _, Message[parseTerm::unmatchTokened, tok]; Abort[]
   ]
 ];
-parseTerm::unexpected = "Unexpected token in term: `1`.";
+parseTerm::unmatchTokened = "UnmatchTokened token in term: `1`.";
 
 parseList[tokens_] := Module[{head, tail},
-  expect[tokens, "LBracket"];
-  If[peekToken[tokens][[1]] === "RBracket",
-    nextToken[tokens];
+  matchToken[tokens, "LBracket"];
+  If[seeAnotherToken[tokens][[1]] === "RBracket",
+    getNextToken[tokens];
     ASTNode["List", {}],
     head = parseTerm[tokens];
-    If[peekToken[tokens][[1]] === "Bar",
-      nextToken[tokens];
+    If[seeAnotherToken[tokens][[1]] === "Bar",
+      getNextToken[tokens];
       tail = parseTail[tokens];
-      expect[tokens, "RBracket"];
+      matchToken[tokens, "RBracket"];
       ASTNode["ListCons", head, tail],
       (* else regular list *)
       tail = {};
-      While[peekToken[tokens][[1]] === "Comma",
-        nextToken[tokens];
+      While[seeAnotherToken[tokens][[1]] === "Comma",
+        getNextToken[tokens];
         AppendTo[tail, parseTerm[tokens]]
       ];
-      expect[tokens, "RBracket"];
+      matchToken[tokens, "RBracket"];
       ASTNode["List", Sequence @@ Prepend[tail, head]]
     ]
   ]
 ];
 
-parseTail[tokens_] := Module[{tok = peekToken[tokens]},
+parseTail[tokens_] := Module[{tok = seeAnotherToken[tokens]},
   Switch[tok[[1]],
-    "Variable", ASTNode["TailVar", nextToken[tokens][[2]]],
+    "Variable", ASTNode["TailVar", getNextToken[tokens][[2]]],
     "LBracket", parseList[tokens],
-    "Bar", ASTNode["TailBar", nextToken[tokens][[2]]],
-    _, Message[parseTail::unexpected, tok]; Abort[]
+    "Bar", ASTNode["TailBar", getNextToken[tokens][[2]]],
+    _, Message[parseTail::unmatchTokened, tok]; Abort[]
   ]
 ];
-parseTail::unexpected = "Unexpected token in tail: `1`.";
+parseTail::unmatchTokened = "UnmatchTokened token in tail: `1`.";
