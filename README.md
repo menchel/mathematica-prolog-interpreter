@@ -3,7 +3,7 @@ A prolog interpreter in mathematica for final project in advanced topics in soft
 
 ## What do I currently have?
 1) A working tokenizer. Gets input, and transfers it to known tokens. `cd tokenizer && tokenizer.wl`
-2) A working parser. Get the output from the tokenizer, and creates an AST. `cd parser && parser.wl`
+2) A working parser. Get the output from the tokenizer, and creates an AST. `cd parser && EBNFParser.wl.wl`
 3) A working dictionary creator. Get the output from the parser, and use facts and rules in a dictionary. `cd dictionary && dictionaryCreator.wl`
 
 ## Next to come👀:
