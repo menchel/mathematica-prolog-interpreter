@@ -42,16 +42,38 @@ ClearAll[
 ];
 
 (* main parse tree, start to check *)
-parseProgram[] := Module[{allClauses, singleQuery},
-  If[seeAnotherToken[][[1]] === "query",
-    (* we saw a query, let's parse it personally *)
-    <|"Facts" -> {}, "Rules" -> {}, "Query" -> parseQuery[]|>,
-    (* if not, then we started with some facts and/or rules and then a query *)
+parseProgram[] := Module[
+  {allClauses = <|"Facts" -> {}, "Rules" -> {}|>, allQueries = {}, token},
+  token = seeAnotherToken[];
+  
+  (* If no tokens at all, return empty *)
+  If[token === None,
+    Return[<|"Facts" -> {}, "Rules" -> {}, "Query" -> {}|>]
+  ];
+  
+  If[token[[1]] === "query",
+    (* zero or more queries only, no clauses *)
+    While[token =!= None && token[[1]] === "query",
+      AppendTo[allQueries, parseQuery[]];
+      token = seeAnotherToken[];
+    ];
+    <|"Facts" -> {}, "Rules" -> {}, "Query" -> allQueries|>,
+    
+    (* otherwise, parse clauses first *)
+    
     allClauses = parseClauseList[];
-    singleQuery = parseQuery[];
-    Join[allClauses, <|"Query" -> singleQuery|>]
+    token = seeAnotherToken[];
+    (* then zero or more queries *)
+    While[token =!= None && token[[1]] === "query",
+      AppendTo[allQueries, parseQuery[]];
+      token = seeAnotherToken[];
+    ];
+    Join[allClauses, <|"Query" -> allQueries|>]
   ]
 ];
+
+
+
 
 (* parses list of clauses *)
 parseClauseList[] := Module[{allFacts = {}, allRules = {}, clause},
@@ -63,7 +85,7 @@ parseClauseList[] := Module[{allFacts = {}, allRules = {}, clause},
     True, AppendTo[allFacts, clause]
   ];
   (* as long as we see Atom/Variable, it is possible *)
-  While[MemberQ[{"Atom", "Variable"}, seeAnotherToken[][[1]]],
+  While[seeAnotherToken[] =!= None && MemberQ[{"Atom", "Variable"}, seeAnotherToken[][[1]]],
     clause = parseClause[];
     Which[
       Head[clause] === Rule, AppendTo[allRules, clause],
