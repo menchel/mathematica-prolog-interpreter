@@ -1,4 +1,3 @@
-(* main tokenizer function *)
 tokenCreator[inputCode_String] := Module[{tokens},
 
   tokens = StringCases[
@@ -8,7 +7,6 @@ tokenCreator[inputCode_String] := Module[{tokens},
       s : RegularExpression["true"] :> {"true",s},
       s : RegularExpression["false"] :> {"false",s},
       s : RegularExpression["_"] :> {"placeHolder",s},
-      s : RegularExpression["?-"] :> {"query",s},
       s : RegularExpression[";"] :> {"or",s},
       s : RegularExpression["\\s+"] :> Nothing,
       s : RegularExpression["[a-z][a-zA-Z0-9_]*"] :> {"Atom", s},
@@ -17,6 +15,7 @@ tokenCreator[inputCode_String] := Module[{tokens},
       s : RegularExpression["'(?:[^']|'')*'"] :> {"String", s},
 
       (* special cases, mostly language built in signs *)
+      "?-" :> {"query","?-"},
       ":-" :> {"ColonDash", ":-"},
       "." :> {"Dot", "."},
       "," :> {"Comma", ","},
