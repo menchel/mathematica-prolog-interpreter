@@ -24,10 +24,8 @@
          | Atom 
          | Variable 
          | <list> 
-         | <structure> 
          | Bar
 
-<structure> ::= Atom RPARCE <term list> LPARSE
 
 <query> ::= '?-' <or list> Dot
 
