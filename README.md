@@ -7,6 +7,7 @@ A prolog interpreter in mathematica for final project in advanced topics in soft
 3) A visual aid to see the parser output. `cd parser && visualAider.wl`
 
 ## Next to come👀:
+- add support of ; (logical or).
 1) Full eval implementation.
      - get the parsed contect.
      - If fact:
