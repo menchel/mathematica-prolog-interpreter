@@ -39,6 +39,6 @@
          | Bar 
          | Variable
 
-Baed on:
+Based on:
 By Ivan Sukin on June 9, 2012
 http://cdn.bitbucket.org/muspellsson/rosetta/downloads/prolog-bnf.html
