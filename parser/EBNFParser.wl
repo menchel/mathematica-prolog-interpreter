@@ -38,7 +38,7 @@ matchToken::unmatchTokened = "Expected `1`, but got `2`.";
 ClearAll[
   parseProgram, parseClauseList, parseClause, parsePredicate,
   parsePredicateList, parseOrList, parseQuery, parseTermList,
-  parseTerm, parseStructure, parseList, parseTail
+  parseTerm, parseList, parseTail
 ];
 
 (* main parse tree, start to check *)
@@ -191,17 +191,32 @@ parseTermList[] := Module[{allTerms = {}},
 ];
 
 (* parse a single term *)
-parseTerm[] := Module[{token = seeAnotherToken[]},
- (* check what we got *)
+parseTerm[] := Module[{token = seeAnotherToken[], head, arguments},
   Switch[token[[1]],
-    "Number" | "Atom" | "Variable" | "placeHolder" | "String",
+  
+    "Number" | "Variable" | "placeHolder" | "String",
     getNextToken[][[2]],
-    (* case of list *)
+
+    "Atom",
+    head = getNextToken[][[2]];
+    If[seeAnotherToken[][[1]] === "LParen",
+      getNextToken[]; (* consume LParen *)
+      arguments = parseTermList[];
+      matchToken["RParen"];
+      <|"Compound" -> head, "Arguments" -> arguments|>,
+      (* plain atom *)
+      head
+    ],
+
     "LBracket", parseList[],
+
     "Bar", getNextToken[][[2]],
+
     _, Message[parseTerm::unmatchTokened, token]; Abort[]
   ]
 ];
+
+
 
 (* parse a prolog list *)
 parseList[] := Module[{start, rest},
@@ -237,6 +252,7 @@ parseList[] := Module[{start, rest},
 parseTail[] := Module[{token = seeAnotherToken[]},
   Switch[token[[1]],
     "Variable", getNextToken[][[2]],
+    "placeHolder", getNextToken[][[2]],
     "LBracket", parseList[],
     "Bar", getNextToken[][[2]],
     _, Message[parseTail::unmatchTokened, token]; Abort[]
