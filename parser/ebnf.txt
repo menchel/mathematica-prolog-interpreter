@@ -1,4 +1,6 @@
-<program> ::= <clause list> <query> | <query>
+<program> ::= <clause list> <query list> | <clause list> | <query list>
+
+<query list> ::= <query> | <query list> <query>
 
 <clause list> ::= <clause> | <clause list> <clause>
 
