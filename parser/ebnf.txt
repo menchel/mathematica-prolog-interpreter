@@ -24,7 +24,7 @@
          | Atom 
          | Variable 
          | <list> 
-         | Bar
+         | PlaceHolder
          | <comp>
 
 <comp> ::= Atom LPARCE <term list> RPARCE
@@ -36,7 +36,7 @@
          | LBracket <term> Bar <tail> RBracket
 
 <tail> ::= <list> 
-         | Bar 
+         | PlaceHolder 
          | Variable
 
 Based on:
