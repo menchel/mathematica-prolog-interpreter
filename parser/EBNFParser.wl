@@ -254,7 +254,6 @@ parseTail[] := Module[{token = seeAnotherToken[]},
     "Variable", getNextToken[][[2]],
     "placeHolder", getNextToken[][[2]],
     "LBracket", parseList[],
-    "Bar", getNextToken[][[2]],
     _, Message[parseTail::unmatchTokened, token]; Abort[]
   ]
 ];
