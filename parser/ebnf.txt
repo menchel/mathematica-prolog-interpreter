@@ -25,7 +25,9 @@
          | Variable 
          | <list> 
          | Bar
+         | <comp>
 
+<comp> ::= Atom LPARCE <term list> RPARCE
 
 <query> ::= '?-' <or list> Dot
 
