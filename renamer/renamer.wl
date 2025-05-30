@@ -1,61 +1,60 @@
 (* renamer *)
-(* first, we need to create a variable name change, to prevent collition *)
-ClearAll[variableRenamer,variableReplacer,variableCollector]
-(* we need: 
-1) collect all of the variables
-2) replace all of the variables
-3) using that, rename them all *)
+ClearAll[variableRenamer, variableReplacer, variableCollector, uniqueVar];
+
+(* create unique names each time *)
+uniqueVar[] := Module[{count = 0}, 
+  Function[Symbol["T$" <> ToString[count++]]]
+];
+uniqueVarGenerator = uniqueVar[];
 
 (* 1) collect all of the variables *)
 variableCollector[term_] := 
   Which[
-    (* case 1: just a regular term *)
-    StringQ[term] && StringMatchQ[term, RegularExpression["[A-Z_].*"]],
+    (* case 1: just a regular variable *)
+    StringQ[term] && StringMatchQ[term, RegularExpression["[A-Z_][a-zA-Z0-9_]*"]],
       {term},
-    (* case 2: compund arguments-> so it is a list of terms *)
+    (* case 2: compound term *)
     AssociationQ[term] && KeyExistsQ[term, "Compound"],
       Flatten[variableCollector /@ term["Arguments"]],
-    (* case 2: arguments-> so it is a list of terms *)
+    (* case 3: predicate arguments *)
     AssociationQ[term] && KeyExistsQ[term, "arguments"],
       Flatten[variableCollector /@ term["arguments"]],
-    
-    (* case 3: negation, means that a term is coming *)
+    (* case 4: negation *)
     AssociationQ[term] && KeyExistsQ[term, "Negation"],
       variableCollector[term["Negation"]],
-    (* case 4: we have a list :) *)
+    (* case 5: list with head/tail *)
     AssociationQ[term] && KeyExistsQ[term, "ListHead"],
       Join[variableCollector[term["ListHead"]], variableCollector[term["Tail"]]],
-    
-    (* another list *)
+    (* case 6: regular list *)
     ListQ[term],
       Flatten[variableCollector /@ term],
-    
-    (* maybe no variable *)
+    (* default: no variables *)
     True, {}
   ];
-
 
 (* replacing the variables *)
 variableReplacer[term_, variablesMapping_] := 
   Which[
-    (* just a term *)
+    (* variable *)
     StringQ[term] && KeyExistsQ[variablesMapping, term],
       variablesMapping[term],
     (* compound term *)
     AssociationQ[term] && KeyExistsQ[term, "Compound"],
       <|"Compound" -> term["Compound"], 
         "Arguments" -> variableReplacer[#, variablesMapping] & /@ term["Arguments"]|>,
-    (* arguments, so kind of list *)
+    (* predicate *)
     AssociationQ[term] && KeyExistsQ[term, "arguments"],
-      AssociationMap[variableReplacer[#, variablesMapping] &, term],
-    (* negation-> maybe a variable soon? *)
+       temp = variableReplacer[#, variablesMapping] & /@ term["arguments"];
+      <|"head" -> term["head"], 
+        "arguments" -> temp|>,
+    (* negation *)
     AssociationQ[term] && KeyExistsQ[term, "Negation"],
       <|"Negation" -> variableReplacer[term["Negation"], variablesMapping]|>,
-    (* a list, hopefully variables are coming *)
+    (* list with head/tail *)
     AssociationQ[term] && KeyExistsQ[term, "ListHead"],
       <|"ListHead" -> variableReplacer[term["ListHead"], variablesMapping], 
         "Tail" -> variableReplacer[term["Tail"], variablesMapping]|>,
-    (* another list *)
+    (* regular list *)
     ListQ[term],
       variableReplacer[#, variablesMapping] & /@ term,
     (* default *)
@@ -63,15 +62,13 @@ variableReplacer[term_, variablesMapping_] :=
   ];
 
 variableRenamer[clause_] := Module[
-  {newVars, variableMapping, rename, newClause},
+  {variables, variableMapping, newClause},
   
-  (* collect all of the variables *)
-  newVars = DeleteDuplicates[variableCollector[clause]];
-  (* take each variable to a unique name *)
-  Print[newVars]
-  variableMapping = {};
-  
-  (* replace all of the variables everywhere *)
+  (* collect all variables *)
+  variables = DeleteDuplicates[variableCollector[clause]];
+  (* create mapping to fresh variables *)
+  variableMapping = AssociationThread[variables -> (uniqueVarGenerator[] & /@ variables)];
+  (* replace variables in clause *)
   newClause = variableReplacer[clause, variableMapping];
   newClause
 ];
