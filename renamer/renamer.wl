@@ -40,8 +40,9 @@ variableReplacer[term_, variablesMapping_] :=
       variablesMapping[term],
     (* compound term *)
     AssociationQ[term] && KeyExistsQ[term, "Compound"],
+       temp = variableReplacer[#, variablesMapping] & /@ term["Arguments"];
       <|"Compound" -> term["Compound"], 
-        "Arguments" -> variableReplacer[#, variablesMapping] & /@ term["Arguments"]|>,
+        "Arguments" -> temp|>,
     (* predicate *)
     AssociationQ[term] && KeyExistsQ[term, "arguments"],
        temp = variableReplacer[#, variablesMapping] & /@ term["arguments"];
