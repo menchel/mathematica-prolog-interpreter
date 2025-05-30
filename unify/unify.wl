@@ -1,96 +1,106 @@
 (* unify *)
-ClearAll[unify, occursCheck, applySubstitution];
+ClearAll[unify, checkInfinity, makeSubstitution];
 
-(* Apply substitution to a term *)
-applySubstitution[term_, substitution_] := 
+(*makes a subsitution for a term *)
+makeSubstitution[term_, substitution_] := 
   Which[
-    (* Variable with substitution *)
+    (* Variable with substitution, replace! *)
     StringQ[term] && term =!= "_" && StringMatchQ[term, RegularExpression["[A-Z_][a-zA-Z0-9_]*"]] && KeyExistsQ[substitution, term],
-      applySubstitution[substitution[term], substitution],
-    (* Placeholder - don't substitute *)
+      makeSubstitution[substitution[term], substitution],
+    (* Placeholder *)
     term === "_", "_",
-    (* Compound term *)
+    (* Compound *)
     AssociationQ[term] && KeyExistsQ[term, "Compound"],
       <|"Compound" -> term["Compound"], 
-        "Arguments" -> (applySubstitution[#, substitution] & /@ term["Arguments"])|>,
-    (* Predicate *)
+        "Arguments" -> (makeSubstitution[#, substitution] & /@ term["Arguments"])|>,
+    (* predicate *)
     AssociationQ[term] && KeyExistsQ[term, "arguments"],
       <|"head" -> term["head"], 
-        "arguments" -> (applySubstitution[#, substitution] & /@ term["arguments"])|>,
-    (* List structure *)
+        "arguments" -> (makeSubstitution[#, substitution] & /@ term["arguments"])|>,
+    (* a wild list has appeared *)
     AssociationQ[term] && KeyExistsQ[term, "ListHead"],
-      <|"ListHead" -> applySubstitution[term["ListHead"], substitution], 
-        "Tail" -> applySubstitution[term["Tail"], substitution]|>,
-    (* Regular list *)
+      <|"ListHead" -> makeSubstitution[term["ListHead"], substitution], 
+        "Tail" -> makeSubstitution[term["Tail"], substitution]|>,
+    (* not so wild list? *)
     ListQ[term],
-      applySubstitution[#, substitution] & /@ term,
-    (* Default case *)
+      makeSubstitution[#, substitution] & /@ term,
+    (* others-> just return as normal *)
     True, term
   ];
 
 (* Check if variable occurs in term *)
-occursCheck[var_, term_, substitution_] := Module[
-  {t = applySubstitution[term, substitution]},
+checkInfinity[var_, term_, substitution_] := Module[
+  {t = makeSubstitution[term, substitution]},
+  (* go over all of the cases *)
   Which[
+    (* if atom, then isn't *)
     var === t, True,
+    (* place holder-> problem *)
     t === "_", False,
+    (* compound term, we need to dive deeper *)
     AssociationQ[t] && KeyExistsQ[t, "Compound"],
-      AnyTrue[t["Arguments"], occursCheck[var, #, substitution] &],
+      AnyTrue[t["Arguments"], checkInfinity[var, #, substitution] &],
+    (* a list of arguments, we need to dive deeper *)
     AssociationQ[t] && KeyExistsQ[t, "arguments"],
-      AnyTrue[t["arguments"], occursCheck[var, #, substitution] &],
+      AnyTrue[t["arguments"], checkInfinity[var, #, substitution] &],
+    (* a list, we need to dive deeper *)
     AssociationQ[t] && KeyExistsQ[t, "ListHead"],
-      occursCheck[var, t["ListHead"], substitution] || occursCheck[var, t["Tail"], substitution],
+      checkInfinity[var, t["ListHead"], substitution] || checkInfinity[var, t["Tail"], substitution],
+    (* just list of stuff, check that all are finit *)
     ListQ[t],
-      AnyTrue[t, occursCheck[var, #, substitution] &],
+      AnyTrue[t, checkInfinity[var, #, substitution] &],
+    (* nothing happaned, good! *)
     True, False
   ]
 ];
 
-(* Main unification function *)
+(* The main event-> The unify function! *)
 unify[term1_, term2_, substitution_:<||>] := Module[
-  {t1 = applySubstitution[term1, substitution], 
-   t2 = applySubstitution[term2, substitution]},
+  {t1 = makeSubstitution[term1, substitution], 
+   t2 = makeSubstitution[term2, substitution]},
   
   Which[
-    (* Terms are identical *)
+    (* terms are the same *)
     t1 === t2, substitution,
     
-    (* Either term is a placeholder *)
+    (* placeholder-> special case *)
     t1 === "_", substitution,
     t2 === "_", substitution,
     
     (* t1 is a variable *)
     StringQ[t1] && t1 =!= "_" && StringMatchQ[t1, RegularExpression["[A-Z_][a-zA-Z0-9_]*"]],
-      If[occursCheck[t1, t2, substitution], 
+      If[checkInfinity[t1, t2, substitution], 
         $Failed,
         Join[substitution, <|t1 -> t2|>]
       ],
     
     (* t2 is a variable *)
     StringQ[t2] && t2 =!= "_" && StringMatchQ[t2, RegularExpression["[A-Z_][a-zA-Z0-9_]*"]],
-      If[occursCheck[t2, t1, substitution], 
+      If[checkInfinity[t2, t1, substitution], 
         $Failed,
         Join[substitution, <|t2 -> t1|>]
       ],
     
-    (* Both are lists *)
+    (* maybe the 2 are just lists *)
     ListQ[t1] && ListQ[t2] && Length[t1] === Length[t2],
+      (* fold, since we accumulate what we know so far. SML vibes *)
       Fold[
         Function[{currSubst, pair}, 
           If[currSubst === $Failed, $Failed, unify[pair[[1]], pair[[2]], currSubst]]
         ],
         substitution,
+        (* saw a post that said that transpose here could help, it did *)
         Transpose[{t1, t2}]
       ],
     
-    (* Both are list structures *)
+    (* maybe they are prolog lists? *)
     AssociationQ[t1] && AssociationQ[t2] && 
     KeyExistsQ[t1, "ListHead"] && KeyExistsQ[t2, "ListHead"],
       Module[{headSubst = unify[t1["ListHead"], t2["ListHead"], substitution]},
         If[headSubst === $Failed, $Failed, unify[t1["Tail"], t2["Tail"], headSubst]]
       ],
     
-    (* Both are compound terms *)
+    (* maybe they are both compund? *)
     AssociationQ[t1] && AssociationQ[t2] &&
     KeyExistsQ[t1, "Compound"] && KeyExistsQ[t2, "Compound"] &&
     t1["Compound"] === t2["Compound"] &&
@@ -103,7 +113,7 @@ unify[term1_, term2_, substitution_:<||>] := Module[
         Transpose[{t1["Arguments"], t2["Arguments"]}]
       ],
     
-    (* Both are predicates *)
+    (* maybe they are both regular predicates *)
     AssociationQ[t1] && AssociationQ[t2] &&
     KeyExistsQ[t1, "head"] && KeyExistsQ[t2, "head"] &&
     t1["head"] === t2["head"] &&
@@ -116,7 +126,7 @@ unify[term1_, term2_, substitution_:<||>] := Module[
         Transpose[{t1["arguments"], t2["arguments"]}]
       ],
     
-    (* Default: unification failed *)
+    (* maybe nothing, so that is a problem *)
     True, $Failed
   ]
 ];
