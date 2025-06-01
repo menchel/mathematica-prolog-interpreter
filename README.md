@@ -12,7 +12,7 @@ A prolog interpreter in mathematica for final project in advanced topics in soft
 1) Continue to solve.
    - Errors needed to be fixed.
      1) cont list [a|Z]. Problem is in unify, it doesn't know how to do that.
-     2) case of placeholder _. Maybe assign a temp variable MMM... and remove at the end.
+     2) case of placeholder _.
 2) Full implementation:
      1) Get input from a in.pl file.
      2) EVAL.
