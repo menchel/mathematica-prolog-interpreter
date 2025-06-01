@@ -9,9 +9,11 @@ A prolog interpreter in mathematica for final project in advanced topics in soft
 5) A working unify. Makes substitutions to help reslove conflicts. `cd unify && unify.wl`
 
 ## Next to come👀:
-1) Create a resolver to solve goals.
-2) Full REPL:🤩
-       - READ- get lines from a .pl file.
-       - EVAL- use the resolver function to process (after tokenizer+parser).
-       - PRINT- print to the screen the output.
-       - LOOP- continue to read.
+1) Continue to solve.
+   - Errors needed to be fixed.
+     1) cont list [a|Z]. Problem is in unify, it doesn't know how to do that.
+     2) case of placeholder _. Maybe assign a temp variable MMM... and remove at the end.
+2) Full implementation:
+     1) Get input from a in.pl file.
+     2) EVAL.
+     3) Print results to out.pl file.
