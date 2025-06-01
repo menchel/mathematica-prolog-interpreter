@@ -13,6 +13,7 @@ A prolog interpreter in mathematica for final project in advanced topics in soft
    - Errors needed to be fixed.
      1) cont list [a|Z]. Problem is in unify, it doesn't know how to do that.
      2) case of placeholder _.
+     3) case like this: listlist([X,Y], C).
 2) Full implementation:
      1) Get input from a in.pl file.
      2) EVAL.
