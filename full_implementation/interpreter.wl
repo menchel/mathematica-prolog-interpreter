@@ -1,3 +1,9 @@
+(* =========== token creator =========== *)
+(*
+	The token creator gets the string input from the user
+	, and creates tokens from it for future use
+*)
+(* ==================================== *)
 tokenCreator[inputCode_String] := Module[{tokens},
 
   tokens = StringCases[
@@ -29,7 +35,14 @@ tokenCreator[inputCode_String] := Module[{tokens},
   ];
   tokens
 ];
-tokens = tokenCreator[(* your code here *)];
+
+(* ============== parser =============== *)
+(*
+	The parser creator gets the tokens from the token creator
+	, and creates parsed AST node that can be used later
+*)
+(* ==================================== *)
+
 (* just helper for a node *)
 ClearAll[ASTNode];
 ASTNode[type_, children___] := <|"type" -> type, "children" -> {children}|>;
@@ -288,6 +301,14 @@ parseTail[] := Module[{token = seeAnotherToken[]},
     _, Message[parseTail::unmatchTokened, token]; Abort[]
   ]
 ];
+
+(* ============ dictionary ============= *)
+(*
+	The dictionary creator gets the parsed facts and rules from the parser
+	, and creates a dictionary of [functor][arity] for future use
+*)
+(* ==================================== *)
+
 (* building a database for all the facts and rules *)
 processClauses[clauses_Association] := Module[
   {facts = clauses["Facts"], rules = clauses["Rules"], dict = <||>},
@@ -331,6 +352,14 @@ processClauses[clauses_Association] := Module[
   
   dict
 ];
+
+(* ============ renamer ============= *)
+(*
+	The renamer gets a parsed fact or rule from the dictionary
+	, and creates a new version with fresh variables
+*)
+(* ==================================== *)
+
 (* renamer *)
 ClearAll[variableRenamer, variableReplacer, variableCollector, uniqueVar];
 
@@ -406,6 +435,14 @@ variableRenamer[clause_] := Module[
   newClause = variableReplacer[clause, variableMapping];
   newClause
 ];
+
+(* ============ unify ============= *)
+(*
+	The unify gets a query and a term
+	, and tries to compare them, infering connections of variables on the way
+*)
+(* ==================================== *)
+
 (* unify *)
 ClearAll[unify, checkInfinity, makeSubstitution];
 
@@ -546,6 +583,12 @@ unify[term1_, term2_, substitution_:<||>] := Module[
 ];
 
 
+(* ============ query resolver ============= *)
+(*
+	The query resolver gets a queries from the parser
+	, and tries solve them using the information in the dictionary
+*)
+(* ==================================== *)
 (* query resolver *)
 ClearAll[resolveQuery];
 
@@ -567,8 +610,7 @@ resolveQuery[queries_, db_] := Module[{results = {}},
       ];*)
       AppendTo[results, solutions]
     ];
-    Print[""],
-    {q, queries}
+    ,{q, queries}
   ];
   results
 ];
@@ -649,8 +691,12 @@ resolveSinglePredicate[predicates_, db_, substitution_] := Module[
           Function[sol, KeySelect[sol, MemberQ[originalVariables, #]&]],
           bodySolutions
         ];
-        
-        solutions = Join[solutions, Select[bodySolutions, Length[#] > 0 &]]
+        solutions = Join[
+				    solutions, 
+				    Select[bodySolutions, 
+				        Not[MatchQ[#, <||>]] || True &
+				    ]
+				]
       ]
     ],
     {rule, db[key, "rules"]}
@@ -668,3 +714,26 @@ formatTerm[term_] := Which[
     term["Compound"] <> "(" <> StringRiffle[Map[formatTerm, term["Arguments"]], ","] <> ")",
   True, ToString[term]
 ];
+
+(* ============ input/output manager ============= *)
+(*
+	The input/output manager recieves the input from in.pl
+	, and put the answers of the interpreter in out.pl
+*)
+(* ==================================== *)
+(* formating to print more nice true and false *)
+printElement[element_] := 
+  If[element === {}, 
+   "false", 
+   If[element === {<||>} || element === {Association[]}, 
+    "true", 
+    ToString[element]]];
+
+ 
+  progText = Import[FileNameJoin[{NotebookDirectory[], "in.pl"}], "Text"];
+  tokens = tokenCreator[progText];
+  parsed = parseProgram[];
+  db = processClauses[parsed];
+  solutions = resolveQuery[parsed["Query"], db];
+  output = printElement /@ solutions;
+  Export[FileNameJoin[{NotebookDirectory[], "out.pl"}], StringRiffle[output, "\n"], "Text"];
