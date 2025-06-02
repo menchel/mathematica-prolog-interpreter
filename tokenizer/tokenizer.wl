@@ -1,3 +1,9 @@
+(* =========== token creator =========== *)
+(*
+	The token creator gets the string input from the user
+	, and creates tokens from it for future use
+*)
+(* ==================================== *)
 tokenCreator[inputCode_String] := Module[{tokens},
 
   tokens = StringCases[
