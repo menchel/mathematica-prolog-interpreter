@@ -3,7 +3,7 @@ ClearAll[variableRenamer, variableReplacer, variableCollector, uniqueVar];
 
 (* create unique names each time *)
 uniqueVar[] := Module[{count = 0}, 
-  Function[Symbol["TT" <> ToString[count++]]]
+  Function[Null, SymbolName[Symbol["TT" <> ToString[count++]]]]
 ];
 uniqueVarGenerator = uniqueVar[];
 
