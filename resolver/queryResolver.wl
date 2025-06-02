@@ -9,14 +9,14 @@ resolveQuery[queries_, db_] := Module[{results = {}},
   Do[
     (* a single query *)
     Module[{solutions = resolveSingleQuery[q[[1]], db]},
-      If[solutions === {} || solutions === $Failed,
+      (*If[solutions === {} || solutions === $Failed,
         Print["  No solutions found"],
         (* print all of the solutions *)
         Do[
           Print["  Solution " <> ToString[solNum] <> ": " <> formatSolution[sol]],
           {sol, solutions}, {solNum, Length[solutions]}
         ]
-      ];
+      ];*)
       AppendTo[results, solutions]
     ];
     Print[""],
@@ -72,7 +72,6 @@ resolveSinglePredicate[predicates_, db_, substitution_] := Module[
   
   key = {predicates["head"], Length[predicates["arguments"]]};
   If[!KeyExistsQ[db, key], Return[{}]];
-  
   (* if fact *)
   Do[
     Module[{renamedFact = variableRenamer[fact], unified},
