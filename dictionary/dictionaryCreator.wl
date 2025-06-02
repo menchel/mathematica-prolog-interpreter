@@ -1,3 +1,10 @@
+(* ============ dictionary ============= *)
+(*
+	The dictionary creator gets the parsed facts and rules from the parser
+	, and creates a dictionary of [functor][arity] for future use
+*)
+(* ==================================== *)
+
 (* building a database for all the facts and rules *)
 processClauses[clauses_Association] := Module[
   {facts = clauses["Facts"], rules = clauses["Rules"], dict = <||>},
