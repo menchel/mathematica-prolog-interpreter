@@ -1,3 +1,10 @@
+(* ============ renamer ============= *)
+(*
+	The renamer gets a parsed fact or rule from the dictionary
+	, and creates a new version with fresh variables
+*)
+(* ==================================== *)
+
 (* renamer *)
 ClearAll[variableRenamer, variableReplacer, variableCollector, uniqueVar];
 
