@@ -58,7 +58,6 @@ checkInfinity[var_, term_, substitution_] := Module[
 unify[term1_, term2_, substitution_:<||>] := Module[
   {t1 = makeSubstitution[term1, substitution], 
    t2 = makeSubstitution[term2, substitution]},
-  
   Which[
     (* terms are the same *)
     t1 === t2, substitution,
@@ -80,7 +79,6 @@ unify[term1_, term2_, substitution_:<||>] := Module[
         $Failed,
         Join[substitution, <|t2 -> t1|>]
       ],
-    
     (* maybe the 2 are just lists *)
     ListQ[t1] && ListQ[t2] && Length[t1] === Length[t2],
       (* fold, since we accumulate what we know so far. SML vibes *)
@@ -99,6 +97,14 @@ unify[term1_, term2_, substitution_:<||>] := Module[
       Module[{headSubst = unify[t1["ListHead"], t2["ListHead"], substitution]},
         If[headSubst === $Failed, $Failed, unify[t1["Tail"], t2["Tail"], headSubst]]
       ],
+      
+    (* maybe t1 is [X|Z] and t2 is {...} *)
+    AssociationQ[t1] && KeyExistsQ[t1, "ListHead"] && ListQ[t2] && Length[t2] > 0,
+    unify[t1, <|"ListHead" -> First[t2], "Tail" -> Rest[t2]|>, substitution],
+    
+    (* maybe t2 is [X|Z] and t1 is {...} *)
+    ListQ[t1] && Length[t1] > 0 && AssociationQ[t2] && KeyExistsQ[t2, "ListHead"],
+    unify[<|"ListHead" -> First[t1], "Tail" -> Rest[t1]|>, t2, substitution],
     
     (* maybe they are both compund? *)
     AssociationQ[t1] && AssociationQ[t2] &&
