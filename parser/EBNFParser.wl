@@ -1,11 +1,17 @@
-tokens = tokenCreator[(* your code here *)];
+(* ============== parser =============== *)
+(*
+	The parser creator gets the tokens from the token creator
+	, and creates parsed AST node that can be used later
+*)
+(* ==================================== *)
+
 (* just helper for a node *)
 ClearAll[ASTNode];
 ASTNode[type_, children___] := <|"type" -> type, "children" -> {children}|>;
 
 (* token user *)
 ClearAll[tokens];
-tokens = tokenCreator["father(X,_,Y):-+father(X,Y),hello([X|XS]);true.?-father(a,b,c)."];
+tokens = {};
 
 (* some token helper functions *)
 ClearAll[seeAnotherToken, getNextToken, matchToken];
