@@ -1,3 +1,10 @@
+(* ============ unify ============= *)
+(*
+	The unify gets a query and a term
+	, and tries to compare them, infering connections of variables on the way
+*)
+(* ==================================== *)
+
 (* unify *)
 ClearAll[unify, checkInfinity, makeSubstitution];
 
