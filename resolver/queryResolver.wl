@@ -1,3 +1,9 @@
+(* ============ query resolver ============= *)
+(*
+	The query resolver gets a queries from the parser
+	, and tries solve them using the information in the dictionary
+*)
+(* ==================================== *)
 (* query resolver *)
 ClearAll[resolveQuery];
 
@@ -19,8 +25,7 @@ resolveQuery[queries_, db_] := Module[{results = {}},
       ];*)
       AppendTo[results, solutions]
     ];
-    Print[""],
-    {q, queries}
+    ,{q, queries}
   ];
   results
 ];
@@ -101,8 +106,12 @@ resolveSinglePredicate[predicates_, db_, substitution_] := Module[
           Function[sol, KeySelect[sol, MemberQ[originalVariables, #]&]],
           bodySolutions
         ];
-        
-        solutions = Join[solutions, Select[bodySolutions, Length[#] > 0 &]]
+        solutions = Join[
+				    solutions, 
+				    Select[bodySolutions, 
+				        Not[MatchQ[#, <||>]] || True &
+				    ]
+				]
       ]
     ],
     {rule, db[key, "rules"]}
