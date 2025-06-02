@@ -336,7 +336,7 @@ ClearAll[variableRenamer, variableReplacer, variableCollector, uniqueVar];
 
 (* create unique names each time *)
 uniqueVar[] := Module[{count = 0}, 
-  Function[Symbol["TT" <> ToString[count++]]]
+  Function[Null, SymbolName[Symbol["TT" <> ToString[count++]]]]
 ];
 uniqueVarGenerator = uniqueVar[];
 
@@ -487,7 +487,6 @@ unify[term1_, term2_, substitution_:<||>] := Module[
         $Failed,
         Join[substitution, <|t2 -> t1|>]
       ],
-    
     (* maybe the 2 are just lists *)
     ListQ[t1] && ListQ[t2] && Length[t1] === Length[t2],
       (* fold, since we accumulate what we know so far. SML vibes *)
@@ -506,6 +505,14 @@ unify[term1_, term2_, substitution_:<||>] := Module[
       Module[{headSubst = unify[t1["ListHead"], t2["ListHead"], substitution]},
         If[headSubst === $Failed, $Failed, unify[t1["Tail"], t2["Tail"], headSubst]]
       ],
+      
+    (* maybe t1 is [X|Z] and t2 is {...} *)
+    AssociationQ[t1] && KeyExistsQ[t1, "ListHead"] && ListQ[t2] && Length[t2] > 0,
+    unify[t1, <|"ListHead" -> First[t2], "Tail" -> Rest[t2]|>, substitution],
+    
+    (* maybe t2 is [X|Z] and t1 is {...} *)
+    ListQ[t1] && Length[t1] > 0 && AssociationQ[t2] && KeyExistsQ[t2, "ListHead"],
+    unify[<|"ListHead" -> First[t1], "Tail" -> Rest[t1]|>, t2, substitution],
     
     (* maybe they are both compund? *)
     AssociationQ[t1] && AssociationQ[t2] &&
@@ -550,14 +557,14 @@ resolveQuery[queries_, db_] := Module[{results = {}},
   Do[
     (* a single query *)
     Module[{solutions = resolveSingleQuery[q[[1]], db]},
-      If[solutions === {} || solutions === $Failed,
+      (*If[solutions === {} || solutions === $Failed,
         Print["  No solutions found"],
         (* print all of the solutions *)
         Do[
           Print["  Solution " <> ToString[solNum] <> ": " <> formatSolution[sol]],
           {sol, solutions}, {solNum, Length[solutions]}
         ]
-      ];
+      ];*)
       AppendTo[results, solutions]
     ];
     Print[""],
@@ -613,7 +620,6 @@ resolveSinglePredicate[predicates_, db_, substitution_] := Module[
   
   key = {predicates["head"], Length[predicates["arguments"]]};
   If[!KeyExistsQ[db, key], Return[{}]];
-  
   (* if fact *)
   Do[
     Module[{renamedFact = variableRenamer[fact], unified},
