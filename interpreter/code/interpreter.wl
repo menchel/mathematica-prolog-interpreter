@@ -338,7 +338,7 @@ uniqueVarGenerator = uniqueVar[];
 (* 1) collect all of the variables *)
 variableCollector[term_] := 
   Which[
-    StringQ[term] && StringMatchQ[term, RegularExpression["[A-Z_][a-zA-Z0-9_]*"]], (* case 1: just a regular variable *)
+    StringQ[term] && StringMatchQ[term, RegularExpression["[A-Z_][a-zA-Z0-9_]*"]], (* case 1: variable *)
       {term},
     AssociationQ[term] && KeyExistsQ[term, "Compound"], (* case 2: compound term *)
       Flatten[variableCollector /@ term["Arguments"]],
@@ -346,44 +346,48 @@ variableCollector[term_] :=
       Flatten[variableCollector /@ term["arguments"]],
     AssociationQ[term] && KeyExistsQ[term, "Negation"], (* case 4: negation *)
       variableCollector[term["Negation"]],
-    AssociationQ[term] && KeyExistsQ[term, "ListHead"],     (* case 5: list with head/tail *)
+    AssociationQ[term] && KeyExistsQ[term, "ListHead"], (* case 5: list with head/tail *)
       Join[variableCollector[term["ListHead"]], variableCollector[term["Tail"]]],
-    ListQ[term],     (* case 6: regular list *)
+    Head[term] === Rule, (* case 6: rule (->) *)
+      Join[
+        variableCollector[term[[1]]],  (* left side *)
+        Flatten[variableCollector /@ Flatten[term[[2]], 1]]  (* right side: flatten one level and collect *)
+      ],
+    ListQ[term], (* case 7: regular list *)
       Flatten[variableCollector /@ term],
-    True, {} (* default: no variables *)
+    True, {} (* default *)
   ];
 
-(* replacing the variables *)
 variableReplacer[term_, variablesMapping_] := 
   Which[
     StringQ[term] && KeyExistsQ[variablesMapping, term], (* variable *)
       variablesMapping[term],
-    AssociationQ[term] && KeyExistsQ[term, "Compound"],     (* compound term *)
-       temp = variableReplacer[#, variablesMapping] & /@ term["Arguments"];
-      <|"Compound" -> term["Compound"], 
-        "Arguments" -> temp|>,
-    AssociationQ[term] && KeyExistsQ[term, "arguments"],     (* predicate *)
-       temp = variableReplacer[#, variablesMapping] & /@ term["arguments"];
-      <|"head" -> term["head"], 
-        "arguments" -> temp|>,
+    AssociationQ[term] && KeyExistsQ[term, "Compound"], (* compound term *)
+      <|"Compound" -> term["Compound"], "Arguments" -> (variableReplacer[#, variablesMapping] & /@ term["Arguments"])|>,
+    AssociationQ[term] && KeyExistsQ[term, "arguments"], (* predicate *)
+      <|"head" -> term["head"], "arguments" -> (variableReplacer[#, variablesMapping] & /@ term["arguments"])|>,
     AssociationQ[term] && KeyExistsQ[term, "Negation"], (* negation *)
       <|"Negation" -> variableReplacer[term["Negation"], variablesMapping]|>,
     AssociationQ[term] && KeyExistsQ[term, "ListHead"], (* list with head/tail *)
-      <|"ListHead" -> variableReplacer[term["ListHead"], variablesMapping], 
-        "Tail" -> variableReplacer[term["Tail"], variablesMapping]|>,
+      <|"ListHead" -> variableReplacer[term["ListHead"], variablesMapping], "Tail" -> variableReplacer[term["Tail"], variablesMapping]|>,
+    Head[term] === Rule, (* rule (->) *)
+      Rule[
+        variableReplacer[term[[1]], variablesMapping], 
+        (variableReplacer[#, variablesMapping] & /@ #) & /@ term[[2]]
+      ],
     ListQ[term], (* regular list *)
       variableReplacer[#, variablesMapping] & /@ term,
-    True, term     (* default *)
+    True, term (* default *)
   ];
 
 variableRenamer[clause_] := Module[
   {variables, variableMapping, newClause},
-  
   variables = DeleteDuplicates[variableCollector[clause]]; (* collect all variables *)
   variableMapping = AssociationThread[variables -> (uniqueVarGenerator[] & /@ variables)];   (* create mapping to fresh variables *)
   newClause = variableReplacer[clause, variableMapping];   (* replace variables in clause *)
   newClause
 ];
+
 
 (* ============ unify ============= *)
 (*
@@ -510,6 +514,29 @@ unify[term1_, term2_, substitution_:<||>] := Module[
 	, and tries solve them using the information in the dictionary
 *)
 (* ==================================== *)
+(* binder *)
+ClearAll[resolveStruct]
+resolveStruct[expr_, mapping_] := 
+  Module[{r},
+    r[x_] := Which[
+      (* If x is a symbol and exists in mapping, resolve it *)
+      Head[x] === Symbol && KeyExistsQ[mapping, x], r[mapping[x]],
+      
+      (* Compound term *)
+      AssociationQ[x] && KeyExistsQ[x, "Compound"], 
+        <| "Compound" -> x["Compound"], 
+           "Arguments" -> r /@ x["Arguments"] |>,
+      
+      (* List or other structures *)
+      ListQ[x], r /@ x,
+      
+      (* Otherwise return unchanged *)
+      True, x
+    ];
+    r[expr]
+  ];
+
+
 (* query resolver *)
 ClearAll[resolveQuery];
 
@@ -594,16 +621,19 @@ resolveSinglePredicate[predicates_, db_, substitution_] := Module[
       headUnified = unify[predicates["arguments"], renamedRule[[1]]["arguments"], substitution];
       If[headUnified =!= $Failed,
         bodySolutions = resolvePredicateList[renamedRule[[2]][[1]], db, headUnified]; (* continue to resolve the others *)
-        bodySolutions = Map[
+        If[ bodySolutions=!={},
+        listInforOfHead = headUnified //. bodySolutions; (* for recursive solutions! *)
+        listInforOfHead = Map[
           Function[sol, KeySelect[sol, MemberQ[originalVariables, #]&]],
-          bodySolutions
+          listInforOfHead
         ];
         solutions = Join[
 				    solutions, 
-				    Select[bodySolutions, 
+				    Select[listInforOfHead, 
 				        Not[MatchQ[#, <||>]] || True &
 				    ]
 				]
+		]
       ]
     ],
     {rule, db[key, "rules"]}
@@ -650,3 +680,5 @@ interpret[] := Module[
 ]
 
 EndPackage[]
+
+interpret[];
