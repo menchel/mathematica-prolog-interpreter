@@ -77,7 +77,6 @@ resolvePredicateList[predicateList_, db_, substitution_] := Module[{
 resolveSinglePredicate[predicates_, db_, substitution_] := Module[
   {solutions = {}, originalVariables, headUnified, bodySolutions, filteredSolution},
   originalVariables = variableCollector[predicates]; (* keep the variables needed to solve (cause otherwise it just returns all of them, even if they are mid-rule *)
-  
   If[KeyExistsQ[predicates, "Negation"],     (* case of negation. Check if you can't solve *)
     Module[{negSolution = resolveSinglePredicate[predicates["Negation"], db, substitution]},
       Return[If[negSolution === {} || negSolution === $Failed, {substitution}, {}]]
@@ -94,6 +93,7 @@ resolveSinglePredicate[predicates_, db_, substitution_] := Module[
     Module[{renamedFact = variableRenamer[fact], unified},
       unified = unify[predicates["arguments"], renamedFact["arguments"], substitution];
       If[unified =!= $Failed,
+        unified = unified //.unified;
         filteredSolution = KeySelect[unified, MemberQ[originalVariables, #]&]; (* keep only the variables needed *)
 	    If[originalVariables === {},
 	       AppendTo[solutions, filteredSolution]
@@ -112,6 +112,7 @@ resolveSinglePredicate[predicates_, db_, substitution_] := Module[
       If[headUnified =!= $Failed,
         bodySolutions = resolvePredicateList[renamedRule[[2]][[1]], db, headUnified]; (* continue to resolve the others *)
         If[ bodySolutions=!={},
+        headUnified = headUnified //. headUnified;
         listInforOfHead = headUnified //. bodySolutions; (* for recursive solutions! *)
         listInforOfHead = Map[
           Function[sol, KeySelect[sol, MemberQ[originalVariables, #]&]],
