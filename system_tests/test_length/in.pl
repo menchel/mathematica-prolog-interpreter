@@ -1,4 +1,10 @@
 length([],zero).
 length([_|X],s(Y)):-length(X,Y).
-?-length([],X).
-?-length([a,b,c],X).
+?-length([a,b,c],T).
+?-length([a,b,c],s(s(zero))).
+?-+length([a,b,c],s(zero)).
+?-length([],zero).
+?-length([a,b(c),c],X).
+?-length([a,b,c(c)],s(s(zero))).
+?-+length([a,b(c),c],s(zero)).
+?-+length([],zero).
