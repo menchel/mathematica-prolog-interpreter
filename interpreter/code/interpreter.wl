@@ -1,3 +1,10 @@
+BeginPackage["MyPrologInterpreter`"]
+
+(* Exported symbols *)
+interpret::usage = "interprets the code in in.pl, and puts the output in out.pl";
+
+Begin["`Private`"]
+
 (* =========== token creator =========== *)
 (*
 	The token creator gets the string input from the user
@@ -629,7 +636,10 @@ printElement[element_] :=
     "true", 
     ToString[element]]];
 
- 
+End[]
+ClearAll[Global`interpret, PrologInterpreter`interpret, MyPrologInterpreter`interpret]
+interpret[] := Module[
+  {progText, parsed, db, solutions, output},
   progText = Import[FileNameJoin[{NotebookDirectory[], "in.pl"}], "Text"];
   tokens = tokenCreator[progText];
   parsed = parseProgram[];
@@ -637,3 +647,6 @@ printElement[element_] :=
   solutions = resolveQuery[parsed["Query"], db];
   output = printElement /@ solutions;
   Export[FileNameJoin[{NotebookDirectory[], "out.pl"}], StringRiffle[output, "\n"], "Text"];
+]
+
+EndPackage[]
