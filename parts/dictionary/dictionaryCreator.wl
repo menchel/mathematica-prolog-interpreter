@@ -12,20 +12,18 @@ processClauses[clauses_Association] := Module[
   (* helper inner func *)
   getKey[currClause_] := Module[{head, arguments},
     Which[
-      (* rule *)
-      Head[currClause] === Rule,
+      Head[currClause] === Rule, (* rule *)
         head = currClause[[1, "head"]];
         arguments = currClause[[1, "arguments"]],
-      (* fact *)
-      True,
+      True,    (* fact *)
         head = currClause["head"];
         arguments = currClause["arguments"]
     ];
     {head, Length[arguments]}
   ];
   
-  (* add fact *)
-  Do[
+
+  Do[   (* add fact *)
     Module[{key = getKey[fact]},
       If[KeyExistsQ[dict, key],
         AppendTo[dict[key, "facts"], fact],
@@ -35,8 +33,7 @@ processClauses[clauses_Association] := Module[
     {fact, facts}
   ];
   
-  (* add rule *)
-  Do[
+  Do[ (* add rule *)
     Module[{key = getKey[rule]},
       If[KeyExistsQ[dict, key],
         AppendTo[dict[key, "rules"], rule],
