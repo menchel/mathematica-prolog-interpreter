@@ -1,37 +1,47 @@
-(* =========== token creator =========== *)
+(* ============ dictionary ============= *)
 (*
-	The token creator gets the string input from the user
-	, and creates tokens from it for future use
+	The dictionary creator gets the parsed facts and rules from the parser
+	, and creates a dictionary of [functor][arity] for future use
 *)
 (* ==================================== *)
-tokenCreator[inputCode_String] := Module[{tokens},
 
-  tokens = StringCases[
-    inputCode,
-    {
-     (* go over all cases *)
-      s : RegularExpression["true"] :> {"true",s},
-      s : RegularExpression["false"] :> {"false",s},
-      s : RegularExpression["_"] :> {"placeHolder",s},
-      s : RegularExpression[";"] :> {"or",s},
-      s : RegularExpression["\\s+"] :> Nothing,
-      s : RegularExpression["[a-z][a-zA-Z0-9_]*"] :> {"Atom", s},
-      s : RegularExpression["[A-Z_][a-zA-Z0-9_]*"] :> {"Variable", s},
-      s : RegularExpression["\\d+(?:\\.\\d+)?"] :> {"Number", s},
-      s : RegularExpression["'(?:[^']|'')*'"] :> {"String", s},
-
-      (* special cases, mostly language built in signs *)
-      "?-" :> {"query","?-"},
-      ":-" :> {"ColonDash", ":-"},
-      "." :> {"Dot", "."},
-      "," :> {"Comma", ","},
-      "(" :> {"LParen", "("},
-      ")" :> {"RParen", ")"},
-      "[" :> {"LBracket", "["},
-      "]" :> {"RBracket", "]"},
-      "|" :> {"Bar", "|"},
-      "+" :> {"Negation","+"}
-    }
+(* building a database for all the facts and rules *)
+processClauses[clauses_Association] := Module[
+  {facts = clauses["Facts"], rules = clauses["Rules"], dict = <||>},
+  
+  (* helper inner func *)
+  getKey[currClause_] := Module[{head, arguments},
+    Which[
+      Head[currClause] === Rule, (* rule *)
+        head = currClause[[1, "head"]];
+        arguments = currClause[[1, "arguments"]],
+      True,    (* fact *)
+        head = currClause["head"];
+        arguments = currClause["arguments"]
+    ];
+    {head, Length[arguments]}
   ];
-  tokens
+  
+
+  Do[   (* add fact *)
+    Module[{key = getKey[fact]},
+      If[KeyExistsQ[dict, key],
+        AppendTo[dict[key, "facts"], fact],
+        dict[key] = <|"facts" -> {fact}, "rules" -> {}|>
+      ]
+    ],
+    {fact, facts}
+  ];
+  
+  Do[ (* add rule *)
+    Module[{key = getKey[rule]},
+      If[KeyExistsQ[dict, key],
+        AppendTo[dict[key, "rules"], rule],
+        dict[key] = <|"facts" -> {}, "rules" -> {rule}|>
+      ]
+    ],
+    {rule, rules}
+  ];
+  
+  dict
 ];
