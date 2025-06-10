@@ -52,28 +52,23 @@ parseProgram[] := Module[
   {allClauses = <|"Facts" -> {}, "Rules" -> {}|>, allQueries = {}, token},
   token = seeAnotherToken[];
   
-  (* If no tokens at all, return empty *)
   If[token === None,
     Return[<|"Facts" -> {}, "Rules" -> {}, "Query" -> {}|>]
-  ];
+  ];(* If no tokens at all, return empty *)
   
   If[token[[1]] === "query",
-    (* zero or more queries only, no clauses *)
     While[token =!= None && token[[1]] === "query",
       AppendTo[allQueries, parseQuery[]];
       token = seeAnotherToken[];
-    ];
+    ]; (* zero or more queries only, no clauses *)
     <|"Facts" -> {}, "Rules" -> {}, "Query" -> allQueries|>,
     
-    (* otherwise, parse clauses first *)
-    
-    allClauses = parseClauseList[];
+    allClauses = parseClauseList[]; (* otherwise, parse clauses first *)
     token = seeAnotherToken[];
-    (* then zero or more queries *)
     While[token =!= None && token[[1]] === "query",
       AppendTo[allQueries, parseQuery[]];
       token = seeAnotherToken[];
-    ];
+    ]; (* then zero or more queries *)
     Join[allClauses, <|"Query" -> allQueries|>]
   ]
 ];
@@ -83,38 +78,30 @@ parseProgram[] := Module[
 
 (* parses list of clauses *)
 parseClauseList[] := Module[{allFacts = {}, allRules = {}, clause},
- (* we assume that it has at least one, otherwise we wouldn't have reached it *)
-  clause = parseClause[];
-  (* append according to if it is a rule or a fact *)
+  clause = parseClause[]; (* we assume that it has at least one, otherwise we wouldn't have reached it *)
   Which[
     Head[clause] === Rule, AppendTo[allRules, clause],
     True, AppendTo[allFacts, clause]
-  ];
-  (* as long as we see Atom/Variable, it is possible *)
+  ]; (* append according to if it is a rule or a fact *)
   While[seeAnotherToken[] =!= None && MemberQ[{"Atom", "Variable"}, seeAnotherToken[][[1]]],
     clause = parseClause[];
     Which[
       Head[clause] === Rule, AppendTo[allRules, clause],
       True, AppendTo[allFacts, clause]
     ];
-  ];
+  ]; (* as long as we see Atom/Variable, it is possible *)
   <|"Facts" -> allFacts, "Rules" -> allRules|>
 ];
 
 (* parses a single given clause *)
 parseClause[] := Module[{start, rest},
- (* get the predicate *)
-  start = parsePredicate[];
-  (* we can either see a rule, or a fact *)
-  If[seeAnotherToken[][[1]] === "ColonDash",
-   (* rule *)
-    getNextToken[];
-    (* parse the list of conditions *)
-    rest = parseOrList[];
+  start = parsePredicate[]; (* get the predicate *)
+  If[seeAnotherToken[][[1]] === "ColonDash", (* we can either see a rule, or a fact *)
+    getNextToken[]; (* rule *)
+    rest = parseOrList[]; (* parse the list of conditions *)
     matchToken["Dot"];
     start -> rest,
-    (* fact *)
-    matchToken["Dot"];
+    matchToken["Dot"]; (* fact *)
     start
   ]
 ];
@@ -122,35 +109,27 @@ parseClause[] := Module[{start, rest},
 (* parsing a query *)
 parseQuery[] := Module[{body},
   matchToken["query"];
-  (* get the actual query *)
-  body = parseOrList[];
-  (* we MUST end with . *)
-  matchToken["Dot"];
+  body = parseOrList[]; (* get the actual query *)
+  matchToken["Dot"]; (* we MUST end with . *)
   body
 ];
 
 (* parses a list (can have or, or not*)
 parseOrList[] := Module[{allors = {}},
- (* begin with first list (or the only one if no ; ) *)
-  AppendTo[allors, parsePredicateList[]];
-  (* if we see more ; , then it means another condition *)
-  While[seeAnotherToken[][[1]] === "or",
+  AppendTo[allors, parsePredicateList[]]; (* begin with first list (or the only one if no ; ) *)
+  While[seeAnotherToken[][[1]] === "or", (* if we see more ; , then it means another condition *)
     getNextToken[];
-    (* parse the continuation *)
-    AppendTo[allors, parsePredicateList[]];
+    AppendTo[allors, parsePredicateList[]]; (* parse the continuation *)
   ];
   allors
 ];
 
 (* parses a list of predicates *)
 parsePredicateList[] := Module[{predicates = {}},
- (* parse the first *)
-  AppendTo[predicates, parsePredicate[]];
-  (* if there are more *)
-  While[seeAnotherToken[][[1]] === "Comma",
+  AppendTo[predicates, parsePredicate[]]; (* parse the first *)
+  While[seeAnotherToken[][[1]] === "Comma", (* if there are more *)
     getNextToken[];
-    (* continue to parse *)
-    AppendTo[predicates, parsePredicate[]];
+    AppendTo[predicates, parsePredicate[]]; (* continue to parse *)
   ];
   predicates
 ];
@@ -158,40 +137,31 @@ parsePredicateList[] := Module[{predicates = {}},
 (* match a single predicate *)
 parsePredicate[] := Module[{token, head, arguments},
   token = seeAnotherToken[];
-  (* what can we see? *)
-  Switch[token[[1]],
-    (* a regular atom *)
-    "Atom",
+  Switch[token[[1]], (* what can we see? *)
+    "Atom", (* a regular atom *)
     head = getNextToken[][[2]];
-    (* check if it is a list of terms or not *)
-    If[seeAnotherToken[][[1]] === "LParen",
+    If[seeAnotherToken[][[1]] === "LParen", (* check if it is a list of terms or not *)
       getNextToken[];
       arguments = parseTermList[];
       matchToken["RParen"];
       <|"head" -> head, "arguments" -> arguments|>,
       <|"head" -> head, "arguments" -> {}|>
     ],
-    (* note the case of negation *)
-    "Negation",
+    "Negation", (* note the case of negation *)
     getNextToken[];
     <|"Negation" -> parsePredicate[]|>,
-    (* we can get true/false as well *)
-    "true" | "false",
+    "true" | "false",     (* we can get true/false as well *)
     <|"bool" -> getNextToken[][[2]]|>,
-    (* no match *)
-    _, Message[parsePredicate::unmatchTokened, token]; Abort[]
+    _, Message[parsePredicate::unmatchTokened, token]; Abort[]  (* no match *)
   ]
 ];
 
 (* matches a list of terms *)
 parseTermList[] := Module[{allTerms = {}},
- (* parse the first term *)
-  AppendTo[allTerms, parseTerm[]];
-  (* if there are more *)
-  While[seeAnotherToken[][[1]] === "Comma",
+  AppendTo[allTerms, parseTerm[]]; (* parse the first term *)
+  While[seeAnotherToken[][[1]] === "Comma", (* if there are more *)
     getNextToken[];
-    (* parse the next one *)
-    AppendTo[allTerms, parseTerm[]]
+    AppendTo[allTerms, parseTerm[]] (* parse the next one *)
   ];
   allTerms
 ];
@@ -210,8 +180,7 @@ parseTerm[] := Module[{token = seeAnotherToken[], head, arguments},
       arguments = parseTermList[];
       matchToken["RParen"];
       <|"Compound" -> head, "Arguments" -> arguments|>,
-      (* plain atom *)
-      head
+      head (* plain atom *)
     ],
 
     "LBracket", parseList[],
@@ -226,26 +195,19 @@ parseTerm[] := Module[{token = seeAnotherToken[], head, arguments},
 
 (* parse a prolog list *)
 parseList[] := Module[{start, rest},
- (* must start with [ *)
-  matchToken["LBracket"];
+  matchToken["LBracket"]; (* must start with [ *)
   If[seeAnotherToken[][[1]] === "RBracket",
-   (* empty list *)
-    getNextToken[];
+    getNextToken[]; (* empty list *)
     {},
-    (* non empty *)
-    start = parseTerm[];
+    start = parseTerm[];  (* non empty *)
     If[seeAnotherToken[][[1]] === "Bar",
-     (* place holder *)
-      getNextToken[];
-      (* get next *)
-      rest = parseTail[];
+      getNextToken[];      (* place holder *)
+      rest = parseTail[];       (* get next *)
       matchToken["RBracket"];
       <|"ListHead" -> start, "Tail" -> rest|>,
-     (* regular list *)
-      rest = {};
+      rest = {};      (* regular list *)
       While[seeAnotherToken[][[1]] === "Comma",
-       (* continue if needed *)
-        getNextToken[];
+        getNextToken[];        (* continue if needed *)
         AppendTo[rest, parseTerm[]]
       ];
       matchToken["RBracket"];
