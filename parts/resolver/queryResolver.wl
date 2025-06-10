@@ -4,6 +4,29 @@
 	, and tries solve them using the information in the dictionary
 *)
 (* ==================================== *)
+(* binder *)
+ClearAll[resolveStruct]
+resolveStruct[expr_, mapping_] := 
+  Module[{r},
+    r[x_] := Which[
+      (* If x is a symbol and exists in mapping, resolve it *)
+      Head[x] === Symbol && KeyExistsQ[mapping, x], r[mapping[x]],
+      
+      (* Compound term *)
+      AssociationQ[x] && KeyExistsQ[x, "Compound"], 
+        <| "Compound" -> x["Compound"], 
+           "Arguments" -> r /@ x["Arguments"] |>,
+      
+      (* List or other structures *)
+      ListQ[x], r /@ x,
+      
+      (* Otherwise return unchanged *)
+      True, x
+    ];
+    r[expr]
+  ];
+
+
 (* query resolver *)
 ClearAll[resolveQuery];
 
@@ -88,16 +111,19 @@ resolveSinglePredicate[predicates_, db_, substitution_] := Module[
       headUnified = unify[predicates["arguments"], renamedRule[[1]]["arguments"], substitution];
       If[headUnified =!= $Failed,
         bodySolutions = resolvePredicateList[renamedRule[[2]][[1]], db, headUnified]; (* continue to resolve the others *)
-        bodySolutions = Map[
+        If[ bodySolutions=!={},
+        listInforOfHead = headUnified //. bodySolutions; (* for recursive solutions! *)
+        listInforOfHead = Map[
           Function[sol, KeySelect[sol, MemberQ[originalVariables, #]&]],
-          bodySolutions
+          listInforOfHead
         ];
         solutions = Join[
 				    solutions, 
-				    Select[bodySolutions, 
+				    Select[listInforOfHead, 
 				        Not[MatchQ[#, <||>]] || True &
 				    ]
 				]
+		]
       ]
     ],
     {rule, db[key, "rules"]}
