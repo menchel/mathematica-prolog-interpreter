@@ -27,3 +27,5 @@ A prolog interpreter in mathematica for final project in advanced topics in soft
 - Test to check some operations on piano numbers.
 ### test_start ▶️
 - Test to check some complex combinations.
+### test_tree 🎄
+- Test to check some tree predicates.
