@@ -7,6 +7,8 @@ mult(X,s(zero),X).
 mult(s(X),Y,Z):-mult(X,Y,T),add(T,Y,Z).
 pow(X,s(zero),X).
 pow(X,s(Y),Z):-pow(X,Y,T),mult(T,X,Z).
+smaller(zero,s(_)).
+smaller(s(X),s(Y)):-smaller(X,Y).
 ?-add(zero,zero,X).
 ?-add(s(s(zero)),s(zero),X).
 ?-add(s(s(zero)),s(s(zero)),X).
@@ -16,3 +18,7 @@ pow(X,s(Y),Z):-pow(X,Y,T),mult(T,X,Z).
 ?-pow(s(s(s(zero))),s(zero),X).
 ?-pow(s(zero),s(s(s(zero))),X).
 ?-pow(s(s(zero)),s(s(s(zero))),X).
+?-smaller(zero,s(s(zero))).
+?-smaller(X,zero).
+?-smaller(s(s(zero)),s(zero)).
+?-smaller(s(s(zero)),s(s(s(zero)))).
