@@ -7,6 +7,8 @@ A prolog interpreter in mathematica for final project in advanced topics in soft
     2) Holds the system design. 💻
 - parts🎓
     - Holds each interpreter part individualy. ▶️
+- system_tests 🧪
+    - Holds checked tests for the interpreter. 🙂
 
 ## How to run? 🏃
 - Use the code from `cd interpreter/code && interpreter.wl` in a wolfram notebook. 💡
