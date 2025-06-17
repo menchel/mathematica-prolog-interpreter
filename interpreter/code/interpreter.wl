@@ -583,6 +583,16 @@ resolvePredicateList[predicateList_, db_, substitution_] := Module[{
   ]
 ];
 
+
+filterCompatibleRules[first_Association, rules_List] := 
+  Select[rules, rule |-> 
+    AllTrue[
+      Keys[first],
+      key |-> !KeyExistsQ[rule, key] || SameQ[rule[key], first[key]]
+    ]
+  ];
+  
+
 (* resolve a single predicates *)
 resolveSinglePredicate[predicates_, db_, substitution_] := Module[
   {solutions = {}, originalVariables, headUnified, bodySolutions, filteredSolution},
@@ -620,19 +630,23 @@ resolveSinglePredicate[predicates_, db_, substitution_] := Module[
     Module[{renamedRule = variableRenamer[rule]},
       headUnified = unify[predicates["arguments"], renamedRule[[1]]["arguments"], substitution];
       If[headUnified =!= $Failed,
-        bodySolutions = resolvePredicateList[renamedRule[[2]][[1]], db, headUnified]; (* continue to resolve the others *)
+        bodySolutions = resolvePredicateList[First[renamedRule[[2]]], db, headUnified]; (* continue to resolve the others *)
         If[ bodySolutions=!={},
         headUnified = headUnified //. headUnified;
-        listInforOfHead = headUnified //. bodySolutions; (* for recursive solutions! *)
-        listInforOfHead = Map[
-          Function[sol, KeySelect[sol, MemberQ[originalVariables, #]&]],
-          listInforOfHead
-        ];
-        solutions = Join[
-				    solutions, 
-				    Select[listInforOfHead, 
-				        Not[MatchQ[#, <||>]] || True &
-				    ]
+        (* need to only select the ones who are good! *)
+        bodySolutions = filterCompatibleRules[headUnified,bodySolutions];
+        If[bodySolutions=!={},
+	        listInforOfHead = headUnified //. bodySolutions; (* for recursive solutions! *)
+	        listInforOfHead = Map[
+	          Function[sol, KeySelect[sol, MemberQ[originalVariables, #]&]],
+	          listInforOfHead
+	        ];
+	        solutions = Join[
+					    solutions, 
+					    Select[listInforOfHead, 
+					        Not[MatchQ[#, <||>]] || True &
+					    ]
+					]
 				]
 		]
       ]
@@ -681,3 +695,5 @@ interpret[] := Module[
 ]
 
 EndPackage[]
+
+interpret[];
