@@ -10,6 +10,16 @@ A prolog interpreter in mathematica for final project in advanced topics in soft
 - system_tests 🧪
     - Holds checked tests for the interpreter. 🙂
 
+## interpreter interface 🗺️
+The interpreter pakacge holds 2 functions:
+
+### interpret
+- this function is the actual interpreter. Calling her will interpret the code in in.pl, and give the output in out.pl. Any errors will appear in the notebook.
+### setDepth
+- this function set the depth of the recursion in the interpreter. Needed since:
+  1) Infinite loops are possible.
+  2) Mathematica has a recursion limit.
+
 ## How to run? 🏃
 - Use the code from `cd interpreter/code && interpreter.wl` in a wolfram notebook. 💡
 - This code is a package ready to use.💻
@@ -31,3 +41,5 @@ A prolog interpreter in mathematica for final project in advanced topics in soft
 - Test to check some complex combinations.
 ### test_tree 🎄
 - Test to check some tree predicates.
+### test_cricle ⚫
+- test to check behaviour with infinite solutions.
