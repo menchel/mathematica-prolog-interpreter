@@ -52,6 +52,7 @@ unifyLogged[t1_, t2_] := Module[
       "Status" -> status
     |>];
 
+  (* had to change to lhs and rhs, since I have already took t1 and t2 :( *)
   ClearAll[loggedUnify];
   loggedUnify[term1_, term2_, substitution_:<||>] := Module[
     {lhs = makeSubstitution[term1, substitution], 
