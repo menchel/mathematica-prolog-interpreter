@@ -9,6 +9,8 @@ A prolog interpreter in mathematica for final project in advanced topics in soft
     - Holds each interpreter part individualy. ▶️
 - system_tests 🧪
     - Holds checked tests for the interpreter. 🙂
+- demonstraition 🎭
+    - Holds a demonstration of the unification process. 🧨
 
 ## interpreter interface 🗺️
 The interpreter pakacge holds 2 functions:
