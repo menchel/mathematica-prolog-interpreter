@@ -539,10 +539,15 @@ resolveStruct[expr_, mapping_] :=
 
 (* query resolver *)
 ClearAll[resolveQuery];
+ClearAll[maxDepth,currentDepth,setDepth];
+maxDepth = 10;
+
+currentDepth = 0;
 
 (* main resolve *)
 resolveQuery[queries_, db_] := Module[{results = {}},
   uniqueVarGenerator = uniqueVar[]; (* unique number for each *)
+  currentDepth = 0;
   Do[ (* take care of all query *)
     Module[{solutions = resolveSingleQuery[q[[1]], db]}, (* a single query *)
       (*If[solutions === {} || solutions === $Failed,
@@ -597,14 +602,20 @@ filterCompatibleRules[first_Association, rules_List] :=
 resolveSinglePredicate[predicates_, db_, substitution_] := Module[
   {solutions = {}, originalVariables, headUnified, bodySolutions, filteredSolution},
   originalVariables = variableCollector[predicates]; (* keep the variables needed to solve (cause otherwise it just returns all of them, even if they are mid-rule *)
+  currentDepth = currentDepth + 1;
+  If[maxDepth < currentDepth,Return[{}]];
   If[KeyExistsQ[predicates, "Negation"],     (* case of negation. Check if you can't solve *)
     Module[{negSolution = resolveSinglePredicate[predicates["Negation"], db, substitution]},
-      Return[If[negSolution === {} || negSolution === $Failed, {substitution}, {}]]
+      Return[If[negSolution === {} || negSolution === $Failed, 
+      currentDepth = currentDepth - 1;
+      {substitution}, {}]]
     ]
   ];
   
   If[KeyExistsQ[predicates, "bool"], (* if bool, then it is regular *)
-    Return[If[predicates["bool"] === "true", {substitution}, {}]]
+    Return[If[predicates["bool"] === "true", 
+    currentDepth = currentDepth - 1;
+    {substitution}, {}]]
   ];
   
   key = {predicates["head"], Length[predicates["arguments"]]}; (* so it is a predicate, let's get the information from the database *)
@@ -641,6 +652,7 @@ resolveSinglePredicate[predicates_, db_, substitution_] := Module[
 	          Function[sol, KeySelect[sol, MemberQ[originalVariables, #]&]],
 	          listInforOfHead
 	        ];
+	        listInforOfHead = DeleteDuplicates[listInforOfHead];
 	        solutions = Join[
 					    solutions, 
 					    Select[listInforOfHead, 
@@ -648,13 +660,14 @@ resolveSinglePredicate[predicates_, db_, substitution_] := Module[
 					    ]
 					]
 				]
+	
 		]
       ]
     ],
     {rule, db[key, "rules"]}
   ];
-  
-  If[solutions === {}, $Failed, solutions]
+  currentDepth = currentDepth - 1;
+  If[solutions === {}, $Failed, DeleteDuplicates[solutions]]
 ]
 
 (* some formating functions, just for better printing *)
@@ -678,11 +691,11 @@ printElement[element_] :=
   If[element === {}, 
    "false", 
    If[element === {<||>} || element === {Association[]}, 
-    "true", 
+    "true",
     ToString[element]]];
-
+    
 End[]
-ClearAll[Global`interpret, PrologInterpreter`interpret, MyPrologInterpreter`interpret]
+ClearAll[Global`interpret,Global`setDepth, PrologInterpreter`interpret, MyPrologInterpreter`interpret]
 interpret[] := Module[
   {progText, parsed, db, solutions, output},
   progText = Import[FileNameJoin[{NotebookDirectory[], "in.pl"}], "Text"];
@@ -694,6 +707,12 @@ interpret[] := Module[
   Export[FileNameJoin[{NotebookDirectory[], "out.pl"}], StringRiffle[output, "\n"], "Text"];
 ]
 
+setDepth[d_] :=
+    Module[{token},
+      maxDepth = d;
+      ]
+
 EndPackage[]
 
+setDepth[15];
 interpret[];
