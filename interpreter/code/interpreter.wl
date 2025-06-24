@@ -1,7 +1,8 @@
 BeginPackage["MyPrologInterpreter`"]
 
 (* Exported symbols *)
-interpret::usage = "interprets the code in in.pl, and puts the output in out.pl";
+Interpret::usage = "interprets the code in in.pl, and puts the output in out.pl";
+PrologDepth::usage = "set a depth for the interpreter";
 
 Begin["`Private`"]
 
@@ -51,15 +52,12 @@ tokenCreator[inputCode_String] := Module[{tokens},
 (* ==================================== *)
 
 (* just helper for a node *)
-ClearAll[ASTNode];
 ASTNode[type_, children___] := <|"type" -> type, "children" -> {children}|>;
 
 (* token user *)
-ClearAll[tokens];
 tokens = {};
 
 (* some token helper functions *)
-ClearAll[seeAnotherToken, getNextToken, matchToken];
 
 (* get the token, doesn't change the list *)
 seeAnotherToken[] := If[Length[tokens] > 0, First[tokens], None];
@@ -85,12 +83,6 @@ matchToken::unmatchTokened = "Expected `1`, but got `2`.";
 
 
 (* the real parser :) *)
-
-ClearAll[
-  parseProgram, parseClauseList, parseClause, parsePredicate,
-  parsePredicateList, parseOrList, parseQuery, parseTermList,
-  parseTerm, parseList, parseTail
-];
 
 (* main parse tree, start to check *)
 parseProgram[] := Module[
@@ -327,7 +319,6 @@ processClauses[clauses_Association] := Module[
 (* ==================================== *)
 
 (* renamer *)
-ClearAll[variableRenamer, variableReplacer, variableCollector, uniqueVar];
 
 (* create unique names each time *)
 uniqueVar[] := Module[{count = 0}, 
@@ -397,7 +388,6 @@ variableRenamer[clause_] := Module[
 (* ==================================== *)
 
 (* unify *)
-ClearAll[unify, checkInfinity, makeSubstitution];
 
 (*makes a subsitution for a term *)
 makeSubstitution[term_, substitution_] := 
@@ -515,7 +505,6 @@ unify[term1_, term2_, substitution_:<||>] := Module[
 *)
 (* ==================================== *)
 (* binder *)
-ClearAll[resolveStruct]
 resolveStruct[expr_, mapping_] := 
   Module[{r},
     r[x_] := Which[
@@ -538,9 +527,7 @@ resolveStruct[expr_, mapping_] :=
 
 
 (* query resolver *)
-ClearAll[resolveQuery];
-ClearAll[maxDepth,currentDepth,setDepth];
-maxDepth = 10;
+PrologDepth = 10;
 
 currentDepth = 0;
 
@@ -603,7 +590,7 @@ resolveSinglePredicate[predicates_, db_, substitution_] := Module[
   {solutions = {}, originalVariables, headUnified, bodySolutions, filteredSolution},
   originalVariables = variableCollector[predicates]; (* keep the variables needed to solve (cause otherwise it just returns all of them, even if they are mid-rule *)
   currentDepth = currentDepth + 1;
-  If[maxDepth < currentDepth,Return[{}]];
+  If[PrologDepth < currentDepth,Return[{}]];
   If[KeyExistsQ[predicates, "Negation"],     (* case of negation. Check if you can't solve *)
     Module[{negSolution = resolveSinglePredicate[predicates["Negation"], db, substitution]},
       Return[If[negSolution === {} || negSolution === $Failed, 
@@ -670,15 +657,6 @@ resolveSinglePredicate[predicates_, db_, substitution_] := Module[
   If[solutions === {}, $Failed, DeleteDuplicates[solutions]]
 ]
 
-(* some formating functions, just for better printing *)
-formatSolution[sol_] := StringRiffle[Map[# <> " = " <> formatTerm[sol[#]] &, Sort[Keys[sol]]], ", "];
-
-formatTerm[term_] := Which[
-  StringQ[term], term,
-  AssociationQ[term] && KeyExistsQ[term, "Compound"], 
-    term["Compound"] <> "(" <> StringRiffle[Map[formatTerm, term["Arguments"]], ","] <> ")",
-  True, ToString[term]
-];
 
 (* ============ input/output manager ============= *)
 (*
@@ -695,24 +673,74 @@ printElement[element_] :=
     ToString[element]]];
     
 End[]
-ClearAll[Global`interpret,Global`setDepth, PrologInterpreter`interpret, MyPrologInterpreter`interpret]
-interpret[] := Module[
+
+PrologDepth = 10;
+
+(* more formating *)
+isRecursiveListHead[term_] := Module[{head = term},
+  While[AssociationQ[head] && KeyExistsQ[head, "ListHead"],
+    head = head["Tail"];
+  ];
+  head === {} || head === Association[] || ListQ[head]
+]
+
+
+formatList[list_] := Module[{elements = {}, head = list},
+  While[AssociationQ[head] && KeyExistsQ[head, "ListHead"],
+    AppendTo[elements, formatTerm[head["ListHead"]]];
+    head = head["Tail"];
+  ];
+  
+  Which[ (* if tail is a list, then faltten it *)
+    head === {} || head === Association[],
+      StringRiffle[elements, ", "],
+    ListQ[head],
+      StringRiffle[Join[elements, formatTerm /@ head], ", "],
+    True,
+      StringRiffle[elements, ", "] <> " | " <> formatTerm[head]
+  ]
+]
+
+
+formatTerm[termVal_] := Which[
+  StringQ[termVal], termVal, (* normal *)
+  AssociationQ[termVal] && KeyExistsQ[termVal, "Compound"], (* compund *)
+    termVal["Compound"] <> "(" <> StringRiffle[formatTerm /@ termVal["Arguments"], ", "] <> ")",
+  AssociationQ[termVal] && KeyExistsQ[termVal, "ListHead"] && isRecursiveListHead[termVal], (* list, but with recursive head *)
+    "[" <> formatList[termVal] <> "]",
+  AssociationQ[termVal] && KeyExistsQ[termVal, "ListHead"], (* other list *)
+    "[" <> formatList[termVal] <> "]",
+  ListQ[termVal], "[" <> StringRiffle[formatTerm /@ termVal, ", "] <> "]",
+  True, ToString[termVal]
+]
+
+(* Formats one substitution like <|X -> a|> into "X = a" *)
+formatSubstitution[sub_Association] := 
+  StringRiffle[KeyValueMap[#1 <> " = " <> formatTerm[#2] &, sub], ", "]
+
+(* Formats an entire result: true., false., X = a ; X = b. *)
+formatAnswer[{}] := "false."
+formatAnswer[{a_Association}] /; a === <||> := "true."
+formatAnswer[{a_Association}] /; a === Association[] := "true."
+formatAnswer[True] := "true."
+formatAnswer[False] := "false."
+formatAnswer[subs_List] := StringRiffle[formatSubstitution /@ subs, " ; "] <> "."
+formatAnswer[other_] := ToString[other]  (* fallback for robustness *)
+
+
+Interpret[] := Module[
   {progText, parsed, db, solutions, output},
   progText = Import[FileNameJoin[{NotebookDirectory[], "in.pl"}], "Text"];
   tokens = tokenCreator[progText];
   parsed = parseProgram[];
   db = processClauses[parsed];
   solutions = resolveQuery[parsed["Query"], db];
-  output = printElement /@ solutions;
+  output = formatAnswer /@ solutions;
   Export[FileNameJoin[{NotebookDirectory[], "out.pl"}], StringRiffle[output, "\n"], "Text"];
 ]
 
-setDepth[d_] :=
-    Module[{token},
-      maxDepth = d;
-      ]
-
 EndPackage[]
 
-setDepth[15];
-interpret[];
+PrologDepth:=15
+
+Interpret[];
