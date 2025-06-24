@@ -1,5 +1,3 @@
-(* ::Package:: *)
-
 (* my unify code *)
 makeSubstitution[term_, substitution_] := 
   Which[
@@ -119,7 +117,7 @@ unifyLogged[t1_, t2_] := Module[
           Transpose[{lhs["arguments"], rhs["arguments"]}]
         ],
 
-      True, logStep[lhs, rhs, subst, "Failed"]; $Failed
+      True, logStep[lhs, rhs, subst, "Bottom"]; $Failed
     ];
 
     res
@@ -133,16 +131,22 @@ unifyLogged[t1_, t2_] := Module[
 ClearAll[toAST]
 toAST[term_] := Which[
   StringQ[term], term,
+  
   AssociationQ[term] && KeyExistsQ[term, "Compound"],
-    TreeForm[TreeNode[term["Compound"], toAST /@ term["Arguments"]]],
+    Tree[term["Compound"], toAST /@ term["Arguments"]],
+  
   AssociationQ[term] && KeyExistsQ[term, "head"],
-    TreeForm[TreeNode[term["head"], toAST /@ term["arguments"]]],
+    Tree[term["head"], toAST /@ term["arguments"]],
+  
   AssociationQ[term] && KeyExistsQ[term, "ListHead"],
-    TreeForm[TreeNode["[|]", {toAST[term["ListHead"]], toAST[term["Tail"]]}]],
+    Tree["[|]", {toAST[term["ListHead"]], toAST[term["Tail"]]}],
+  
   ListQ[term],
-    TreeForm[TreeNode["List", toAST /@ term]],
+    Tree["List", toAST /@ term],
+  
   True, term
 ];
+
 
 (* a bit of visual tools! *)
 visualizeUnification[logData_] := Manipulate[
@@ -150,7 +154,7 @@ visualizeUnification[logData_] := Manipulate[
     Grid[{
       {Style["Term 1", Bold], toAST[step["Term1"]]},
       {Style["Term 2", Bold], toAST[step["Term2"]]},
-      {Style["Current attempt", Bold], step["Substitution"]},
+      {Style["Current unifier", Bold], step["Substitution"]},
       {Style["Result", Bold], step["Status"]}
     }, Alignment -> Left, Spacings -> {2, 2}]
   ],
@@ -187,6 +191,3 @@ example3 = unifyLogged[
     {"c", "d"}
   }|>
 ];
-
-
-visualizeUnification[example2["Log"]]
