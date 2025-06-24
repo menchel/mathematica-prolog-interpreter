@@ -1,8 +1,8 @@
-{<|T -> <|Compound -> s, Arguments -> {<|Compound -> s, Arguments -> {<|Compound -> s, Arguments -> {zero}|>}|>}|>|>}
-false
-true
-true
-{<|X -> <|Compound -> s, Arguments -> {<|Compound -> s, Arguments -> {<|Compound -> s, Arguments -> {zero}|>}|>}|>|>}
-false
-true
-false
+T = s(s(s(zero))).
+false.
+true.
+true.
+X = s(s(s(zero))).
+false.
+true.
+false.
