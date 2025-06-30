@@ -147,14 +147,63 @@ toAST[term_] := Which[
   True, term
 ];
 
-
 (* a bit of visual tools! *)
+
+(* more formating *)
+isRecursiveListHead[term_] := Module[{head = term},
+  While[AssociationQ[head] && KeyExistsQ[head, "ListHead"],
+    head = head["Tail"];
+  ];
+  head === {} || head === Association[] || ListQ[head]
+]
+
+
+formatList[list_] := Module[{elements = {}, head = list},
+  While[AssociationQ[head] && KeyExistsQ[head, "ListHead"],
+    AppendTo[elements, formatTerm[head["ListHead"]]];
+    head = head["Tail"];
+  ];
+  
+  Which[ (* if tail is a list, then faltten it *)
+    head === {} || head === Association[],
+      StringRiffle[elements, ", "],
+    ListQ[head],
+      StringRiffle[Join[elements, formatTerm /@ head], ", "],
+    True,
+      StringRiffle[elements, ", "] <> " | " <> formatTerm[head]
+  ]
+]
+
+
+formatTerm[termVal_] := Which[
+  StringQ[termVal], termVal, (* normal *)
+  AssociationQ[termVal] && KeyExistsQ[termVal, "Compound"], (* compund *)
+    termVal["Compound"] <> "(" <> StringRiffle[formatTerm /@ termVal["Arguments"], ", "] <> ")",
+  AssociationQ[termVal] && KeyExistsQ[termVal, "ListHead"] && isRecursiveListHead[termVal], (* list, but with recursive head *)
+    "[" <> formatList[termVal] <> "]",
+  AssociationQ[termVal] && KeyExistsQ[termVal, "ListHead"], (* other list *)
+    "[" <> formatList[termVal] <> "]",
+  ListQ[termVal], "[" <> StringRiffle[formatTerm /@ termVal, ", "] <> "]",
+  True, ToString[termVal]
+]
+
+formatSubstitution[sub_Association] := 
+  StringRiffle[KeyValueMap[#1 <> " = " <> formatTerm[#2] &, sub], ", "]
+
+formatAnswer[{}] := "false."
+formatAnswer[{a_Association}] /; a === <||> := "true."
+formatAnswer[{a_Association}] /; a === Association[] := "true."
+formatAnswer[True] := "true."
+formatAnswer[False] := "false."
+formatAnswer[subs_List] := StringRiffle[formatSubstitution /@ subs, " ; "] <> "."
+formatAnswer[other_] := ToString[other]
+
 visualizeUnification[logData_] := Manipulate[
   Module[{step = logData[[i]]},
     Grid[{
       {Style["Term 1", Bold], toAST[step["Term1"]]},
       {Style["Term 2", Bold], toAST[step["Term2"]]},
-      {Style["Current unifier", Bold], step["Substitution"]},
+      {Style["Current unifier", Bold], formatAnswer[{step["Substitution"]}]},
       {Style["Result", Bold], step["Status"]}
     }, Alignment -> Left, Spacings -> {2, 2}]
   ],
@@ -190,4 +239,24 @@ example3 = unifyLogged[
     <|"Compound" -> "g", "Arguments" -> {"a", "b"}|>,
     {"c", "d"}
   }|>
+];
+
+(* some safot tutorial examples *)
+example4 = unifyLogged[
+  <|"Compound" -> "triangle", "Arguments" -> {
+    <|"Compound" -> "point", "Arguments" -> {"1", "1"}|>,
+    "A",
+    <|"Compound" -> "point", "Arguments" -> {"2", "3"}|>
+  }|>,
+  
+  <|"Compound" -> "triangle", "Arguments" -> {
+    "X",
+    <|"Compound" -> "point", "Arguments" -> {"4", "2"}|>,
+    <|"Compound" -> "point", "Arguments" -> {"2", "Z"}|>
+  }|>
+];
+
+example5 = unifyLogged[
+    <|"Compound" -> "course", "Arguments" -> {"95", "S","N"}|>,
+	<|"Compound" -> "course", "Arguments" -> {"95", "97","Y"}|>
 ];
