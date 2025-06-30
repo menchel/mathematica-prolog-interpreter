@@ -714,18 +714,18 @@ formatTerm[termVal_] := Which[
   True, ToString[termVal]
 ]
 
-(* Formats one substitution like <|X -> a|> into "X = a" *)
+(* format <|X -> a|> into "X = a" *)
 formatSubstitution[sub_Association] := 
   StringRiffle[KeyValueMap[#1 <> " = " <> formatTerm[#2] &, sub], ", "]
 
-(* Formats an entire result: true., false., X = a ; X = b. *)
+(* fromat X = a ; X = b. *)
 formatAnswer[{}] := "false."
 formatAnswer[{a_Association}] /; a === <||> := "true."
 formatAnswer[{a_Association}] /; a === Association[] := "true."
 formatAnswer[True] := "true."
 formatAnswer[False] := "false."
 formatAnswer[subs_List] := StringRiffle[formatSubstitution /@ subs, " ; "] <> "."
-formatAnswer[other_] := ToString[other]  (* fallback for robustness *)
+formatAnswer[other_] := ToString[other] (* else catch *)
 
 
 Interpret[] := Module[
