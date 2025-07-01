@@ -1,5 +1,5 @@
 # mathematica-prolog-interpreter
-A prolog interpreter in mathematica for final project in advanced topics in software engineering (02360651)🔥
+A prolog interpreter in mathematica for final project in advanced topics in software engineering (02360651) under the guildance of Prof Y.Gil
 
 # repository structure 🏗️
 - interpreter ⚙️
