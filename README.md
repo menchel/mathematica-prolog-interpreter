@@ -1,3 +1,5 @@
+This project was done as partial fulfillment of the requirements of the 2360651 Technion course on advanced topics in software engineering, in the spring semester of the academic year 2024/25, under the supervision of Yossi GIl
+
 # mathematica-prolog-interpreter
 A prolog interpreter in mathematica for final project in advanced topics in software engineering (02360651) under the guildance of Prof Y.Gil
 
